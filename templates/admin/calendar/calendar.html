@@ -1,0 +1,634 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Calendar Management{% endblock %}
+
+{% block content %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Holiday Calendar Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">Holiday Calendar Management</h3>
+            </div>
+            <div class="card-body">
+                <!-- Filter Controls -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label">Year</label>
+                            <select id="yearSelect" class="form-select">
+                                <option value="2023">2023</option>
+                                <option value="2024">2024</option>
+                                <option value="2025" selected>2025</option>
+                                <option value="2026">2026</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label">Month</label>
+                            <select id="monthSelect" class="form-select">
+                                <option value="0">All Year</option>
+                                <option value="1">January</option>
+                                <option value="2">February</option>
+                                <option value="3">March</option>
+                                <option value="4">April</option>
+                                <option value="5">May</option>
+                                <option value="6">June</option>
+                                <option value="7">July</option>
+                                <option value="8" selected>August</option>
+                                <option value="9">September</option>
+                                <option value="10">October</option>
+                                <option value="11">November</option>
+                                <option value="12">December</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label">Calendar Type</label>
+                            <select id="calendarTypeSelect" class="form-select">
+                                <option value="public" selected>Public Holidays</option>
+                                <option value="region_1">Region 1</option>
+                                <option value="region_2">Region 2</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="form-group">
+                            <label class="form-label">Date (Optional)</label>
+                            <input type="number" id="dateSelect" class="form-select" min="0" max="31" placeholder="Day (0=all)">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <button id="loadCalendar" class="btn btn-primary">
+                            <i class="fas fa-sync-alt"></i> Load Calendar
+                        </button>
+                        <button id="exportCalendar" class="btn btn-outline-secondary">
+                            <i class="fas fa-download"></i> Export CSV
+                        </button>
+                        <button id="refreshData" class="btn btn-outline-info">
+                            <i class="fas fa-database"></i> Refresh Data
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Loading Indicator -->
+                <div id="loadingIndicator" class="text-center py-3" style="display: none;">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Loading calendar data from database...</p>
+                </div>
+                
+                <!-- Error/Success Messages -->
+                <div id="messageContainer"></div>
+                
+                <!-- Calendar Container -->
+                <div class="row">
+                    <div class="col-12">
+                        <div id="calendar-container" class="border rounded p-3">
+                            <div class="calendar-header d-flex justify-content-between align-items-center mb-3">
+                                <div>
+                                    <h4 id="calendarTitle">Holiday Calendar</h4>
+                                    <small class="text-muted" id="calendarSubtitle">Select filters to view data</small>
+                                </div>
+                                <div>
+                                    <span id="holidayCount" class="badge bg-primary">0 holidays</span>
+                                    <span id="dataSource" class="badge bg-info">Database</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Calendar Display -->
+                            <div id="calendarDisplay">
+                                <div class="text-center py-5">
+                                    <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                                    <h5 class="text-muted">No holidays loaded</h5>
+                                    <p class="text-muted">Click "Load Calendar" to fetch holiday data</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics Cards -->
+                <div class="row mt-4">
+                    <div class="col-md-3">
+                        <div class="card bg-primary text-white">
+                            <div class="card-body text-center">
+                                <h3 id="totalHolidays">0</h3>
+                                <p class="mb-0">Total Holidays</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-success text-white">
+                            <div class="card-body text-center">
+                                <h3 id="publicHolidays">0</h3>
+                                <p class="mb-0">Public Holidays</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <h3 id="activeHolidays">0</h3>
+                                <p class="mb-0">Active Holidays</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card bg-warning text-dark">
+                            <div class="card-body text-center">
+                                <h3 id="availableYears">4</h3>
+                                <p class="mb-0">Available Years</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Styles -->
+    <style>
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background-color: #dee2e6;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+    }
+
+    .calendar-header-cell {
+        background-color: #495057;
+        color: white;
+        text-align: center;
+        padding: 12px 8px;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+
+    .calendar-day {
+        background-color: white;
+        padding: 8px;
+        min-height: 100px;
+        position: relative;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .calendar-day:hover {
+        background-color: #f8f9fa;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .calendar-day.other-month {
+        background-color: #f8f9fa;
+        color: #6c757d;
+    }
+
+    .calendar-day.has-holiday {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+    }
+
+    .calendar-day.has-holiday:hover {
+        background-color: #ffeaa7;
+    }
+
+    .day-number {
+        font-weight: bold;
+        margin-bottom: 6px;
+        font-size: 1.1rem;
+    }
+
+    .holiday-indicator {
+        background-color: #dc3545;
+        color: white;
+        font-size: 9px;
+        padding: 2px 4px;
+        border-radius: 3px;
+        margin-bottom: 2px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        line-height: 1.2;
+    }
+
+    .holiday-card {
+        transition: all 0.2s ease;
+        border: 1px solid #dee2e6;
+    }
+
+    .holiday-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .month-section {
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 0.375rem;
+        margin-bottom: 20px;
+    }
+
+    .holiday-list-view {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+
+    .message-alert {
+        padding: 12px 16px;
+        border-radius: 0.375rem;
+        margin-bottom: 16px;
+        border: 1px solid transparent;
+    }
+
+    .message-success {
+        background-color: #d1e7dd;
+        border-color: #badbcc;
+        color: #0f5132;
+    }
+
+    .message-error {
+        background-color: #f8d7da;
+        border-color: #f5c6cb;
+        color: #721c24;
+    }
+
+    .message-info {
+        background-color: #cff4fc;
+        border-color: #b8daff;
+        color: #055160;
+    }
+
+    @media (max-width: 768px) {
+        .calendar-day {
+            min-height: 60px;
+            padding: 4px;
+        }
+        
+        .day-number {
+            font-size: 0.9rem;
+            margin-bottom: 2px;
+        }
+        
+        .holiday-indicator {
+            font-size: 8px;
+            padding: 1px 2px;
+        }
+    }
+    </style>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    // Calendar configuration and state
+    let currentData = {
+        year: 2025,
+        month: 8,
+        date: 0,
+        calendarType: 'public',
+        holidays: [],
+        holidaysByDate: {},
+        request_type: '',
+        filter_description: '',
+        calendar_grid: null,
+        total_holidays: 0,
+        api_source: '',
+        available_years: []
+    };
+
+    // Month names
+    const monthNames = [
+        '', 'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        attachEventListeners();
+        console.log('Calendar initialized');
+    });
+
+    // Attach event listeners
+    function attachEventListeners() {
+        document.getElementById('loadCalendar').addEventListener('click', loadCalendarData);
+        document.getElementById('exportCalendar').addEventListener('click', exportCalendar);
+        document.getElementById('refreshData').addEventListener('click', loadCalendarData);
+    }
+
+    // Load calendar data from your existing API
+    async function loadCalendarData() {
+        const year = document.getElementById('yearSelect').value;
+        const month = document.getElementById('monthSelect').value;
+        const date = document.getElementById('dateSelect').value || 0;
+        const calendarType = document.getElementById('calendarTypeSelect').value;
+        
+        showLoading(true);
+        clearMessages();
+        
+        try {
+            let apiUrl;
+            let params = new URLSearchParams({
+                year: year,
+                month: month,
+                date: date
+            });
+
+            // Determine which API endpoint to use based on calendar type
+            if (calendarType === 'public') {
+                apiUrl = `/holidays/calendar?${params}`;
+            } else if (calendarType.startsWith('region_')) {
+                const regionId = calendarType.split('_')[1];
+                apiUrl = `/holidays/region-calendar/${regionId}?${params}`;
+            } else {
+                throw new Error('Invalid calendar type selected');
+            }
+
+            const response = await fetch(apiUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status} - ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            // Update current data with API response
+            currentData = {
+                ...currentData,
+                ...data,
+                year: parseInt(year),
+                month: parseInt(month),
+                date: parseInt(date),
+                calendarType: calendarType
+            };
+
+            // Process holidays for display
+            processHolidaysData();
+            updateUI();
+            showMessage('Calendar loaded successfully from database!', 'success');
+            
+        } catch (error) {
+            console.error('Error loading calendar:', error);
+            showMessage(`Error loading calendar: ${error.message}`, 'error');
+        } finally {
+            showLoading(false);
+        }
+    }
+
+    // Process holidays data for UI display
+    function processHolidaysData() {
+        if (!currentData.holidays) return;
+
+        // Create holidays by date mapping
+        currentData.holidaysByDate = {};
+        currentData.holidays.forEach(holiday => {
+            const dateStr = holiday.date;
+            if (!currentData.holidaysByDate[dateStr]) {
+                currentData.holidaysByDate[dateStr] = [];
+            }
+            currentData.holidaysByDate[dateStr].push(holiday);
+        });
+    }
+
+    // Update UI with current data
+    function updateUI() {
+        // Update title and statistics
+        document.getElementById('calendarTitle').textContent = currentData.filter_description || 'Holiday Calendar';
+        document.getElementById('calendarSubtitle').textContent = currentData.api_source || 'Database';
+        document.getElementById('holidayCount').textContent = `${currentData.total_holidays || 0} holidays`;
+        document.getElementById('totalHolidays').textContent = currentData.total_holidays || 0;
+        document.getElementById('publicHolidays').textContent = currentData.holidays ? currentData.holidays.filter(h => h.is_public).length : 0;
+        document.getElementById('activeHolidays').textContent = currentData.holidays ? currentData.holidays.length : 0;
+        
+        // Update calendar display
+        updateCalendarDisplay();
+    }
+
+    // Update calendar display based on current data
+    function updateCalendarDisplay() {
+        if (currentData.request_type === 'specific_month' && currentData.calendar_grid) {
+            displayMonthlyCalendar();
+        } else if (currentData.holidays && currentData.holidays.length > 0) {
+            displayHolidaysList();
+        } else {
+            displayNoData();
+        }
+    }
+
+    // Display monthly calendar view
+    function displayMonthlyCalendar() {
+        if (!currentData.calendar_grid) return;
+
+        let html = '<div class="calendar-grid">';
+        
+        // Header
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        dayNames.forEach(day => {
+            html += `<div class="calendar-header-cell">${day}</div>`;
+        });
+        
+        // Days
+        currentData.calendar_grid.forEach(week => {
+            week.forEach(day => {
+                if (day === 0) {
+                    html += '<div class="calendar-day other-month"></div>';
+                } else {
+                    const dateStr = `${currentData.year}-${currentData.month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+                    const dayHolidays = currentData.holidaysByDate[dateStr] || [];
+                    const hasHoliday = dayHolidays.length > 0;
+                    
+                    html += `
+                        <div class="calendar-day ${hasHoliday ? 'has-holiday' : ''}" 
+                             data-date="${dateStr}" onclick="showDayDetails('${dateStr}')">
+                            <div class="day-number">${day}</div>
+                            ${dayHolidays.map(h => `<div class="holiday-indicator" title="${h.name} - ${h.description || ''}">${h.name.substring(0, 15)}</div>`).join('')}
+                        </div>
+                    `;
+                }
+            });
+        });
+        
+        html += '</div>';
+        document.getElementById('calendarDisplay').innerHTML = html;
+    }
+
+    // Display holidays list
+    function displayHolidaysList() {
+        if (!currentData.holidays || currentData.holidays.length === 0) {
+            displayNoData();
+            return;
+        }
+        
+        // Group holidays by month
+        const holidaysByMonth = {};
+        currentData.holidays.forEach(holiday => {
+            const date = new Date(holiday.date);
+            const monthKey = date.getMonth() + 1;
+            if (!holidaysByMonth[monthKey]) holidaysByMonth[monthKey] = [];
+            holidaysByMonth[monthKey].push(holiday);
+        });
+        
+        let html = '<div class="holiday-list-view">';
+        
+        Object.keys(holidaysByMonth).sort((a, b) => parseInt(a) - parseInt(b)).forEach(month => {
+            const monthHolidays = holidaysByMonth[month];
+            html += `
+                <div class="month-section">
+                    <h5 class="text-primary border-bottom pb-2">
+                        ${monthNames[parseInt(month)]} ${currentData.year}
+                        <span class="badge bg-secondary">${monthHolidays.length} holidays</span>
+                    </h5>
+                    <div class="row">
+            `;
+            
+            monthHolidays.forEach(holiday => {
+                const date = new Date(holiday.date);
+                html += `
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card holiday-card" data-holiday-id="${holiday.id}">
+                            <div class="card-body">
+                                <h6 class="card-title">${holiday.name}</h6>
+                                <p class="card-text">
+                                    <i class="fas fa-calendar-day text-muted"></i>
+                                    <small>${date.toLocaleDateString()}</small>
+                                </p>
+                                ${holiday.description ? `<p class="card-text text-muted small">${holiday.description}</p>` : ''}
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge bg-success">${holiday.type || 'Holiday'}</span>
+                                    <span class="badge bg-info">ID: ${holiday.calendar_id || 'N/A'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div></div>';
+        });
+        
+        html += '</div>';
+        document.getElementById('calendarDisplay').innerHTML = html;
+    }
+
+    // Display no data message
+    function displayNoData() {
+        document.getElementById('calendarDisplay').innerHTML = `
+            <div class="text-center py-5">
+                <i class="fas fa-calendar-times fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">No holidays found</h5>
+                <p class="text-muted">No holidays found for the selected criteria.</p>
+            </div>
+        `;
+    }
+
+    // Show day details
+    function showDayDetails(dateStr) {
+        const dayHolidays = currentData.holidaysByDate[dateStr] || [];
+        
+        if (dayHolidays.length === 0) {
+            showMessage('No holidays on this date', 'info');
+            return;
+        }
+        
+        let message = `Holidays on ${new Date(dateStr).toLocaleDateString()}:\n\n`;
+        dayHolidays.forEach(holiday => {
+            message += `• ${holiday.name}\n`;
+            if (holiday.description) message += `  ${holiday.description}\n`;
+            message += `  Type: ${holiday.type}, Calendar: ${holiday.calendar_id}\n\n`;
+        });
+        
+        alert(message);
+    }
+
+    // Export calendar to CSV
+    function exportCalendar() {
+        if (!currentData.holidays || currentData.holidays.length === 0) {
+            showMessage('No data to export', 'error');
+            return;
+        }
+        
+        const headers = ['Date', 'Name', 'Description', 'Type', 'Calendar ID', 'Is Public'];
+        let csv = headers.join(',') + '\n';
+        
+        currentData.holidays.forEach(holiday => {
+            const row = [
+                holiday.date,
+                `"${holiday.name}"`,
+                `"${holiday.description || ''}"`,
+                holiday.type,
+                holiday.calendar_id,
+                holiday.is_public
+            ];
+            csv += row.join(',') + '\n';
+        });
+        
+        // Download file
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `holidays_${currentData.year}_${currentData.month || 'all'}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        
+        showMessage('Calendar exported successfully!', 'success');
+    }
+
+    // Show loading indicator
+    function showLoading(show) {
+        const indicator = document.getElementById('loadingIndicator');
+        indicator.style.display = show ? 'block' : 'none';
+    }
+
+    // Show messages
+    function showMessage(message, type) {
+        clearMessages();
+        
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `message-alert message-${type}`;
+        alertDiv.innerHTML = `
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+            ${message}
+            <button type="button" class="btn-close float-end" onclick="this.parentElement.remove()"></button>
+        `;
+        
+        document.getElementById('messageContainer').appendChild(alertDiv);
+        
+        // Auto-hide success messages
+        if (type === 'success') {
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 5000);
+        }
+    }
+
+    // Clear messages
+    function clearMessages() {
+        document.getElementById('messageContainer').innerHTML = '';
+    }
+    </script>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% extends "admin/base.html" %}
+
+{% block title %} User Company Details{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">User Concientech Details</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Full Name</th>
+                        <th>Department</th>
+                        <th>Role</th>
+                        <th>Joining Date</th>
+                        <th>Project</th>
+                        <th>Description</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for detail in user_details %}
+                    <tr>
+                        <td>{{ detail.user_id }}</td>
+                        <td>{{ detail.full_name }}</td>
+                        <td>{{ detail.current_Department or '-' }}</td>
+                        <td>{{ detail.current_role or '-' }}</td>
+                        <td>{{ detail.date_of_joining.strftime('%Y-%m-%d') if detail.date_of_joining else '-' }}</td>
+                        <td>{{ detail.Project_name or '-' }}</td>
+                        <td>{{ (detail.project_description.split()[:8]|join(' ') ~ ('...' if detail.project_description and detail.project_description.split()|length > 8 else '')) if detail.project_description else '-' }}</td>
+                        <td>
+                            <a href="/admin/company details/view/{{ detail.user_id }}" class="btn btn-primary btn-md">
+                                View
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center">No user details found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

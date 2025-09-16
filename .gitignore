@@ -1,0 +1,66 @@
+.env
+.venv/
+venv/
+_pycache__
+_pycache__/
+regions.txt
+userdata.txt
+calendar.txt
+holiday.txt
+# -----------------
+# Python cache / compiled files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.hintrc
+
+# -----------------
+# Virtual environment
+.venv/
+venv/
+
+# -----------------
+# Environment & secrets
+.env
+*.env
+config.json
+secrets.json
+
+# -----------------
+# IDE/editor files
+.vscode/
+.idea/
+
+# -----------------
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# -----------------
+# Logs
+*.log
+
+# -----------------
+# Build / dist files
+dist/
+build/
+*.egg-info/
+
+# -----------------
+# Node / frontend build (if used inside static)
+node_modules/
+*.map
+
+# -----------------
+# Test / coverage
+.coverage
+.pytest_cache/
+htmlcov/
+
+# -----------------
+# Custom project text files (if not needed in repo)
+regions.txt
+userdata.txt
+calendar.txt
+holiday.txt

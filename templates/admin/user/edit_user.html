@@ -1,0 +1,77 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Edit User{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between space-x-2">
+            <h3 class="card-title">Edit User</h3>
+            <a href="/admin/user/view/{{ user.id }}" class="btn btn-outline-primary btn-sm">
+                <i class="ti ml-1 ti-arrow-left"></i>
+                Back to User Details
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="/admin/user/edit/{{ user.id }}">
+            <div class="row">
+                <!-- User Information -->
+                <div class="col-md-6 mb-3">
+                    <div class="form-group">
+                        <label class="form-label">Username</label>
+                        <input type="text" class="form-control" name="username" value="{{ user.username }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" name="email" value="{{ user.email }}" required>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="form-group">
+                        <label class="form-label">Role</label>
+                        <select class="form-select" name="role" required>
+                            {% for role in roles %}
+                            <option value="{{ role }}" {% if user.role == role %}selected{% endif %}>{{ role|title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="form-group">
+                        <label class="form-label">New Password (leave blank to keep current)</label>
+                        <input type="password" class="form-control" name="password">
+                    </div>
+                </div>
+
+                <!-- User Details -->
+                <div class="col-md-6 mb-3">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-control" name="full_name" value="{{ user_details.full_name if user_details else '' }}">
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="form-group">
+                        <label class="form-label">Personal Email</label>
+                        <input type="email" class="form-control" name="personal_email" value="{{ user_details.personal_email if user_details else '' }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="ti ti-device-floppy me-1"></i>
+                    Save Changes
+                </button>
+                <a href="/admin/user/delete/{{ user.id }}" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this user? This action cannot be undone.')">
+                    <i class="ti ti-trash me-1"></i>
+                    Delete User
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,777 @@
+{% extends "admin/base.html" %}
+
+{% block title %}MoM Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0">Minutes of Meeting Management</h3>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#momModal" id="add-new-btn">Add New MoM</button>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <div class="row g-2">
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select id="filter-status" class="form-select">
+                            <option value="">All</option>
+                            <option value="Open">Open</option>
+                            <option value="Closed">Closed</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label class="form-label">Project</label>
+                        <input id="filter-project" type="text" class="form-control" placeholder="Project Name">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label class="form-label">Meeting Type</label>
+                        <select id="filter-meeting-type" class="form-select">
+                            <option value="">All</option>
+                            <option value="Online">Online</option>
+                            <option value="Offline">Offline</option>
+                            <option value="Hybrid">Hybrid</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label class="form-label">From Date</label>
+                        <input id="filter-from-date" type="date" class="form-control">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label class="form-label">To Date</label>
+                        <input id="filter-to-date" type="date" class="form-control">
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="form-group">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-info form-control" onclick="refreshData()">Refresh</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table" id="mom-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Meeting Date</th>
+                        <th>Time</th>
+                        <th>Project</th>
+                        <th>Meeting Type</th>
+                        <th>Attendees</th>
+                        <th>Status</th>
+                        <th>Created By</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="mom-body">
+                        {% if moms and moms|length > 0 %}
+                            {% for mom in moms %}
+                            <tr>
+                                <td><strong>#{{ mom.id }}</strong></td>
+                                <td>{{ mom.meeting_date }}</td>
+                                <td>{{ mom.start_time }} - {{ mom.end_time }}</td>
+                                <td><span class="badge bg-light text-dark">{{ mom.project }}</span></td>
+                                <td><span class="badge bg-info">{{ mom.meeting_type }}</span></td>
+                                <td>{{ mom.attendees|join(', ') }}</td>
+                                <td><span class="badge bg-success">{{ mom.status }}</span></td>
+                                <td>User #{{ mom.created_by }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <!-- You can add server-side actions here if needed -->
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="9" class="text-center">Loading...</td>
+                            </tr>
+                        {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit MoM Modal -->
+<div class="modal fade" id="momModal" tabindex="-1" aria-labelledby="momModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="momModalLabel">Add Minutes of Meeting</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="mom-form">
+                    <input type="hidden" id="mom-id">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="meeting-date" class="form-label">Meeting Date</label>
+                                <input type="date" class="form-control" id="meeting-date" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="start-time" class="form-label">Start Time</label>
+                                <input type="time" class="form-control" id="start-time" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="end-time" class="form-label">End Time</label>
+                                <input type="time" class="form-control" id="end-time" required>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="project" class="form-label">Project</label>
+                                <input type="text" class="form-control" id="project" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="meeting-type" class="form-label">Meeting Type</label>
+                                <select class="form-select" id="meeting-type" required>
+                                    <option value="">Select Meeting Type</option>
+                                    <option value="Online">Online</option>
+                                    <option value="Offline">Offline</option>
+                                    <option value="Hybrid">Hybrid</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="attendees" class="form-label">Attendees (comma separated)</label>
+                                <textarea class="form-control" id="attendees" rows="3" placeholder="John Doe, Jane Smith, etc."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="absent" class="form-label">Absent Members (comma separated)</label>
+                                <textarea class="form-control" id="absent" rows="3" placeholder="Alice Johnson, Bob Wilson, etc."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="outer-attendees" class="form-label">External Attendees (comma separated)</label>
+                                <textarea class="form-control" id="outer-attendees" rows="2" placeholder="Client representatives, vendors, etc."></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="location-link" class="form-label">Location/Meeting Link</label>
+                                <input type="text" class="form-control" id="location-link" placeholder="Conference Room or Zoom link">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="mom-status" class="form-label">Status</label>
+                        <select class="form-select" id="mom-status" required>
+                            <option value="Open">Open</option>
+                            <option value="Closed">Closed</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="created-by" class="form-label">Created By (User ID)</label>
+                        <input type="number" class="form-control" id="created-by" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="submit" form="mom-form" class="btn btn-primary" id="save-button">Save MoM</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- View Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1" aria-labelledby="detailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="detailsModalLabel">MoM Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="details-content">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="downloadPDF()">Download PDF</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Items Modal -->
+<div class="modal fade" id="actionItemsModal" tabindex="-1" aria-labelledby="actionItemsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="actionItemsModalLabel">Action Items Management</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-vcenter">
+                        <thead>
+                            <tr>
+                                <th>Action Item</th>
+                                <th>Assigned To</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Project</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="action-items-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal" id="actionModal" tabindex="-1">
+    <div class="modal-dialog modal-sm" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">MoM Management</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modal-body-content">
+                <p>Processing...</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Use relative URLs instead of absolute
+const CURRENT_USER_ID = 1; // Set from session/user management
+let allMomData = [];
+let currentMomId = null;
+
+const API_BASE_URL = ''; // Empty string for relative URLs
+
+// Initialize modals
+const momModal = new bootstrap.Modal(document.getElementById('momModal'));
+const detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
+const actionItemsModal = new bootstrap.Modal(document.getElementById('actionItemsModal'));
+
+// Get DOM elements
+const tableBody = document.getElementById('mom-body');
+const momForm = document.getElementById('mom-form');
+const addNewBtn = document.getElementById('add-new-btn');
+
+// Get filter elements
+const statusFilter = document.getElementById('filter-status');
+const projectFilter = document.getElementById('filter-project');
+const meetingTypeFilter = document.getElementById('filter-meeting-type');
+const fromDateFilter = document.getElementById('filter-from-date');
+const toDateFilter = document.getElementById('filter-to-date');
+
+// Utility functions
+function showModalMessage(message, type = 'success') {
+    const modalBody = document.getElementById('modal-body-content');
+    modalBody.innerHTML = `<div class="alert alert-${type === 'success' ? 'success' : 'danger'}">${message}</div>`;
+    new bootstrap.Modal(document.getElementById('actionModal')).show();
+}
+
+function formatTime(timeStr) {
+    if (!timeStr) return '';
+    return timeStr.substring(0, 5); // HH:MM format
+}
+
+function formatDateTime(dateTimeStr) {
+    return dateTimeStr ? new Date(dateTimeStr).toLocaleString() : '';
+}
+
+function getStatusBadgeClass(status) {
+    const statusClasses = {
+        'open': 'bg-info',
+        'closed': 'bg-success',
+        'pending': 'bg-warning text-dark'
+    };
+    return statusClasses[(status || '').toLowerCase()] || 'bg-secondary';
+}
+
+function getMeetingTypeBadgeClass(type) {
+    const typeClasses = {
+        'online': 'bg-primary',
+        'offline': 'bg-secondary',
+        'hybrid': 'bg-info'
+    };
+    return typeClasses[(type || '').toLowerCase()] || 'bg-light text-dark';
+}
+
+// Render table
+function renderTable(momData) {
+    tableBody.innerHTML = '';
+    if (!momData.length) {
+        tableBody.innerHTML = '<tr><td colspan="9" class="text-center">No MoMs found.</td></tr>';
+        return;
+    }
+
+    momData.forEach(mom => {
+        const statusBadgeClass = getStatusBadgeClass(mom.status);
+        const typeBadgeClass = getMeetingTypeBadgeClass(mom.meeting_type);
+        const attendeesDisplay = Array.isArray(mom.attendees) 
+            ? mom.attendees.slice(0, 2).join(', ') + (mom.attendees.length > 2 ? '...' : '')
+            : (mom.attendees || '').split(',').slice(0, 2).join(', ') + ((mom.attendees || '').split(',').length > 2 ? '...' : '');
+
+        const actionButtons = `
+            <div class="btn-group">
+                <button class="btn btn-info btn-sm" onclick="viewDetails(${mom.id})" title="View Details">
+                    <i class="ti ti-eye"></i>
+                </button>
+                <button class="btn btn-warning btn-sm" onclick="viewActionItems(${mom.id})" title="Action Items">
+                    <i class="ti ti-checklist"></i>
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="editMom(${mom.id})" title="Edit">
+                    <i class="ti ti-edit"></i>
+                </button>
+                <button class="btn btn-danger btn-sm" onclick="deleteMom(${mom.id})" title="Delete">
+                    <i class="ti ti-trash"></i>
+                </button>
+            </div>
+        `;
+
+        const row = `
+            <tr>
+                <td><strong>#${mom.id}</strong></td>
+                <td>${mom.meeting_date || ''}</td>
+                <td>${formatTime(mom.start_time)} - ${formatTime(mom.end_time)}</td>
+                <td><span class="badge bg-light text-dark">${mom.project || ''}</span></td>
+                <td><span class="badge ${typeBadgeClass}">${mom.meeting_type || ''}</span></td>
+                <td title="${Array.isArray(mom.attendees) ? mom.attendees.join(', ') : mom.attendees}">${attendeesDisplay}</td>
+                <td><span class="badge ${statusBadgeClass}">${mom.status || ''}</span></td>
+                <td>User #${mom.created_by || ''}</td>
+                <td>${actionButtons}</td>
+            </tr>
+        `;
+        tableBody.insertAdjacentHTML('beforeend', row);
+    });
+}
+
+// Apply filters
+function applyFilters() {
+    let data = [...allMomData];
+    
+    const status = statusFilter.value;
+    const project = projectFilter.value.trim().toLowerCase();
+    const meetingType = meetingTypeFilter.value;
+    const fromDate = fromDateFilter.value;
+    const toDate = toDateFilter.value;
+
+    if (status) data = data.filter(mom => mom.status === status);
+    if (project) data = data.filter(mom => (mom.project || '').toLowerCase().includes(project));
+    if (meetingType) data = data.filter(mom => mom.meeting_type === meetingType);
+    if (fromDate) data = data.filter(mom => mom.meeting_date >= fromDate);
+    if (toDate) data = data.filter(mom => mom.meeting_date <= toDate);
+
+    renderTable(data);
+}
+
+// Fetch MoM data
+async function fetchMomData() {
+    try {
+        tableBody.innerHTML = '<tr><td colspan="9" class="text-center">Loading...</td></tr>';
+        
+        const response = await fetch('/mom/', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin'
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('Fetched MoM data:', data);
+
+        // Handle different response formats
+        if (data.moms && Array.isArray(data.moms)) {
+            allMomData = data.moms.sort((a, b) => b.id - a.id);
+        } else if (Array.isArray(data)) {
+            allMomData = data.sort((a, b) => b.id - a.id);
+        } else {
+            allMomData = [];
+        }
+
+        applyFilters();
+    } catch (error) {
+        console.error('Fetch error:', error);
+        tableBody.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Failed to load data: ${error.message}</td></tr>`;
+    }
+}
+
+// Save MoM
+async function saveMom(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('mom-id').value;
+    const attendeesText = document.getElementById('attendees').value;
+    
+    const data = {
+        meeting_date: document.getElementById('meeting-date').value,
+        start_time: document.getElementById('start-time').value + ':00',
+        end_time: document.getElementById('end-time').value + ':00',
+        attendees: attendeesText ? attendeesText.split(',').map(s => s.trim()).filter(s => s) : [],
+        project: document.getElementById('project').value,
+        meeting_type: document.getElementById('meeting-type').value,
+        location_link: document.getElementById('location-link').value || '',
+        status: document.getElementById('mom-status').value,
+        created_by: parseInt(document.getElementById('created-by').value || CURRENT_USER_ID)
+    };
+
+    const url = id ? `/mom/${id}` : '/mom/';
+    const method = id ? 'PUT' : 'POST';
+
+    try {
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.detail || 'Could not save MoM');
+        }
+
+        momModal.hide();
+        await fetchMomData();
+        showModalMessage(id ? 'MoM updated successfully' : 'MoM created successfully');
+    } catch (error) {
+        console.error('Save error:', error);
+        showModalMessage(error.message, 'error');
+    }
+}
+
+// Edit MoM
+function editMom(id) {
+    const mom = allMomData.find(m => m.id == id);
+    if (!mom) return;
+
+    document.getElementById('momModalLabel').textContent = 'Edit Minutes of Meeting';
+    document.getElementById('mom-id').value = mom.id;
+    document.getElementById('meeting-date').value = mom.meeting_date || '';
+    document.getElementById('start-time').value = mom.start_time ? mom.start_time.substring(0, 5) : '';
+    document.getElementById('end-time').value = mom.end_time ? mom.end_time.substring(0, 5) : '';
+    document.getElementById('project').value = mom.project || '';
+    document.getElementById('meeting-type').value = mom.meeting_type || '';
+    
+    // Handle attendees array
+    const attendeesStr = Array.isArray(mom.attendees) ? mom.attendees.join(', ') : (mom.attendees || '');
+    const absentStr = Array.isArray(mom.absent) ? mom.absent.join(', ') : (mom.absent || '');
+    const outerAttendeesStr = Array.isArray(mom.outer_attendees) ? mom.outer_attendees.join(', ') : (mom.outer_attendees || '');
+    
+    document.getElementById('attendees').value = attendeesStr;
+    document.getElementById('absent').value = absentStr;
+    document.getElementById('outer-attendees').value = outerAttendeesStr;
+    document.getElementById('location-link').value = mom.location_link || '';
+    document.getElementById('mom-status').value = mom.status || 'Open';
+    document.getElementById('created-by').value = mom.created_by || CURRENT_USER_ID;
+    
+    momModal.show();
+}
+
+// Delete MoM
+async function deleteMom(id) {
+    if (!confirm('Are you sure you want to delete this MoM? This action cannot be undone.')) return;
+
+    try {
+        const response = await fetch(`/mom/${id}`, {
+            method: 'DELETE',
+            credentials: 'same-origin'
+        });
+
+        if (!response.ok) {
+            throw new Error('Delete failed');
+        }
+
+        await fetchMomData();
+        showModalMessage('MoM deleted successfully');
+    } catch (error) {
+        console.error('Delete error:', error);
+        showModalMessage(error.message, 'error');
+    }
+}
+
+// View Details
+async function viewDetails(id) {
+    currentMomId = id;
+    document.getElementById('details-content').innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+    detailsModal.show();
+
+    try {
+        // Fetch basic MoM data
+        const momResponse = await fetch(`/mom/${id}`, {
+            credentials: 'same-origin'
+        });
+        const momData = await momResponse.json();
+
+        // Fetch additional data
+        const [infoResponse, decisionsResponse, actionItemsResponse] = await Promise.all([
+            fetch(`/mom/mom-information/mom/${id}`, {
+                credentials: 'same-origin'
+            }).catch(() => null),
+            fetch(`/mom-decision/mom/${id}`, {
+                credentials: 'same-origin'
+            }).catch(() => null),
+            fetch(`/mom/action-items/mom/${id}`, {
+                credentials: 'same-origin'
+            }).catch(() => null)
+        ]);
+
+        const information = infoResponse ? await infoResponse.json() : [];
+        const decisions = decisionsResponse ? await decisionsResponse.json() : [];
+        const actionItems = actionItemsResponse ? await actionItemsResponse.json() : [];
+
+        // Render details
+        const attendeesList = Array.isArray(momData.attendees) ? momData.attendees : (momData.attendees || '').split(',').map(s => s.trim()).filter(s => s);
+        const absentList = Array.isArray(momData.absent) ? momData.absent : (momData.absent || '').split(',').map(s => s.trim()).filter(s => s);
+
+        let detailsHtml = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Meeting Information</h6>
+                    <table class="table table-sm">
+                        <tr><td><strong>MoM ID:</strong></td><td>#${momData.id}</td></tr>
+                        <tr><td><strong>Date:</strong></td><td>${momData.meeting_date}</td></tr>
+                        <tr><td><strong>Time:</strong></td><td>${formatTime(momData.start_time)} - ${formatTime(momData.end_time)}</td></tr>
+                        <tr><td><strong>Project:</strong></td><td>${momData.project}</td></tr>
+                        <tr><td><strong>Type:</strong></td><td><span class="badge ${getMeetingTypeBadgeClass(momData.meeting_type)}">${momData.meeting_type}</span></td></tr>
+                        <tr><td><strong>Location:</strong></td><td>${momData.location_link || 'N/A'}</td></tr>
+                        <tr><td><strong>Status:</strong></td><td><span class="badge ${getStatusBadgeClass(momData.status)}">${momData.status}</span></td></tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>Participants</h6>
+                    <div class="mb-3">
+                        <strong>Attendees:</strong><br>
+                        ${attendeesList.length ? attendeesList.map(a => `<span class="badge bg-success me-1">${a}</span>`).join('') : '<em>None specified</em>'}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Absent:</strong><br>
+                        ${absentList.length ? absentList.map(a => `<span class="badge bg-warning me-1">${a}</span>`).join('') : '<em>None</em>'}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        if (information.length > 0) {
+            detailsHtml += `
+                <h6 class="mt-4">Information Shared</h6>
+                <ul class="list-group list-group-flush">
+                    ${information.map(info => `<li class="list-group-item">${info.information}</li>`).join('')}
+                </ul>
+            `;
+        }
+
+        if (decisions.length > 0) {
+            detailsHtml += `
+                <h6 class="mt-4">Decisions Made</h6>
+                <ul class="list-group list-group-flush">
+                    ${decisions.map(decision => `<li class="list-group-item">${decision.decision}</li>`).join('')}
+                </ul>
+            `;
+        }
+
+        if (actionItems.length > 0) {
+            detailsHtml += `
+                <h6 class="mt-4">Action Items</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Action</th>
+                                <th>Assigned To</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${actionItems.map(item => `
+                                <tr>
+                                    <td>${item.action_item}</td>
+                                    <td>${item.assigned_to}</td>
+                                    <td>${item.due_date}</td>
+                                    <td><span class="badge ${getStatusBadgeClass(item.status)}">${item.status}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        document.getElementById('details-content').innerHTML = detailsHtml;
+    } catch (error) {
+        console.error('Error fetching details:', error);
+        document.getElementById('details-content').innerHTML = `
+            <div class="alert alert-danger">
+                Failed to load MoM details: ${error.message}
+            </div>
+        `;
+    }
+}
+
+// View Action Items
+async function viewActionItems(momId) {
+    try {
+        const response = await fetch(`/mom/action-items/mom/${momId}`, {
+            credentials: 'same-origin'
+        });
+
+        const actionItems = response.ok ? await response.json() : [];
+        const tbody = document.getElementById('action-items-body');
+        
+        if (actionItems.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center">No action items found</td></tr>';
+        } else {
+            tbody.innerHTML = actionItems.map(item => `
+                <tr>
+                    <td>${item.action_item}</td>
+                    <td>${item.assigned_to}</td>
+                    <td>${item.due_date}</td>
+                    <td><span class="badge ${getStatusBadgeClass(item.status)}">${item.status}</span></td>
+                    <td>${item.project}</td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="updateActionItemStatus(${item.id})">
+                            <i class="ti ti-edit"></i> Update Status
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+        
+        actionItemsModal.show();
+    } catch (error) {
+        console.error('Error fetching action items:', error);
+        showModalMessage('Failed to load action items', 'error');
+    }
+}
+
+// Update Action Item Status
+async function updateActionItemStatus(itemId) {
+    const newStatus = prompt('Enter new status (Pending, In Progress, Completed, Cancelled):');
+    if (!newStatus) return;
+
+    try {
+        const response = await fetch(`/mom/action-items/${itemId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ status: newStatus })
+        });
+
+        if (response.ok) {
+            showModalMessage('Action item status updated');
+            // Refresh action items modal if open
+            const currentModal = bootstrap.Modal.getInstance(document.getElementById('actionItemsModal'));
+            if (currentModal) {
+                viewActionItems(currentMomId);
+            }
+        } else {
+            throw new Error('Failed to update status');
+        }
+    } catch (error) {
+        showModalMessage(error.message, 'error');
+    }
+}
+
+// Download PDF
+function downloadPDF() {
+    if (currentMomId) {
+        window.open(`/mom/${currentMomId}/generate-pdf`, '_blank');
+    }
+}
+
+// Refresh data
+function refreshData() {
+    fetchMomData();
+    showModalMessage('Data refreshed');
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+    // Set default values
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('meeting-date').value = today;
+    document.getElementById('created-by').value = CURRENT_USER_ID;
+
+    // Load data
+    fetchMomData();
+    
+    // Set up auto-refresh every 30 seconds
+    setInterval(fetchMomData, 30000);
+
+    // Filter event listeners
+    statusFilter.addEventListener('change', applyFilters);
+    projectFilter.addEventListener('input', applyFilters);
+    meetingTypeFilter.addEventListener('change', applyFilters);
+    fromDateFilter.addEventListener('change', applyFilters);
+    toDateFilter.addEventListener('change', applyFilters);
+
+    // Form event listeners
+    momForm.addEventListener('submit', saveMom);
+    
+    addNewBtn.addEventListener('click', () => {
+        momForm.reset();
+        document.getElementById('mom-id').value = '';
+        document.getElementById('momModalLabel').textContent = 'Add Minutes of Meeting';
+        document.getElementById('meeting-date').value = today;
+        document.getElementById('created-by').value = CURRENT_USER_ID;
+        document.getElementById('mom-status').value = 'Open';
+    });
+});
+</script>
+{% endblock %}

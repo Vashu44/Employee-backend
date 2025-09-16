@@ -1,0 +1,132 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Create New User{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between space-x-2">
+            <h3 class="card-title">Create New User</h3>
+            <div>
+                <a href="/admin/dashboard" class="btn btn-outline-primary btn-sm">
+                    <i class="ti ti-arrow-left"></i>
+                    Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if error %}
+        <div class="alert alert-danger" role="alert">
+            {{ error }}
+        </div>
+        {% endif %}
+        
+        <form method="post" action="/admin/user/users/new" enctype="application/x-www-form-urlencoded">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="form-group">
+                        <label class="form-label required">Username</label>
+                        <input type="text" class="form-control" name="username" required>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="form-group">
+                        <label class="form-label required">Email</label>
+                        <input type="email" class="form-control" name="email" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="form-group">
+                        <label class="form-label required">Password</label>
+                        <input type="password" class="form-control" name="password" required>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="form-group">
+                        <label class="form-label required">Role</label>
+                        <select class="form-select" name="role" required>
+                            <option value="">Select Role</option>
+                            <option value="employee">Employee</option>
+                            <option value="hr">HR</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-footer">
+                <button type="submit" class="btn btn-primary">Create User</button>
+            </div>
+        </form>
+                        <div class="mb-3">
+                            <label class="form-label">Date of Joining</label>
+                            <div class="form-control-plaintext">{{ user_detail.date_of_joining.strftime('%Y-%m-%d') if user_detail.date_of_joining else 'Not provided' }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employment Details -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Employment Details</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Department</label>
+                            <div class="form-control-plaintext">{{ user_detail.current_Department or 'Not assigned' }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Current Role</label>
+                            <div class="form-control-plaintext">{{ user_detail.current_role or 'Not assigned' }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project Details -->
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Project Details</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Project Name</label>
+                            <div class="form-control-plaintext">{{ user_detail.Project_name or 'Not assigned' }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Project Start Date</label>
+                            <div class="form-control-plaintext">{{ user_detail.project_Start_date.strftime('%Y-%m-%d') if user_detail.project_Start_date else 'Not specified' }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Project End Date</label>
+                            <div class="form-control-plaintext">{{ user_detail.project_End_date.strftime('%Y-%m-%d') if user_detail.project_End_date else 'Not specified' }}</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Project Description</label>
+                            <div class="form-control-plaintext">{{ user_detail.project_description or 'No description provided' }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="mt-4">
+            <a href="/admin/company details/edit/{{ user_detail.user_id }}" class="btn btn-primary">
+                <i class="ti ti-edit"></i>
+                Edit Details
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- create_user_form.html -->
+<form method="post" action="/admin/user/users/new">
+{% endblock %}

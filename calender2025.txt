@@ -1,0 +1,81 @@
+{
+  "username": "aditya.kapil",
+  "email": "aditya.kapil@concientech.com",
+  "password": "Aditya123",
+  "role": "employee"
+}
+{
+  "username": "robin.kaushik",
+  "email": "robin.kaushik@concientech.com",
+  "password": "Robin123@",
+  "role": "hr"
+}
+
+-- holidays
+
+INSERT INTO holidays (id, date, name, type, description, local_name, is_public, is_active, country_code) VALUES
+-- 2026 for IN
+(1, '2026-01-01', 'New Year''s Day', 'PUBLIC', 'New Year''s Day Celebration', 'New Year', 1, 1, 'IN'),
+(2, '2026-01-14', 'Makar Sankranti', 'PUBLIC', 'Harvest Festival', 'Makar Sankranti', 1, 1, 'IN'),
+(3, '2026-01-26', 'Republic Day', 'NATIONAL', 'Commemorates the Constitution of India', 'Republic Day', 1, 1, 'IN'),
+(4, '2026-03-02', 'Maha Shivratri', 'RELIGIOUS', 'Festival honoring Lord Shiva', 'Maha Shivratri', 1, 1, 'IN'),
+(5, '2026-03-19', 'Holi', 'PUBLIC', 'Festival of Colors', 'Holi', 1, 1, 'IN'),
+(6, '2026-04-03', 'Good Friday', 'RELIGIOUS', 'Christian holiday commemorating the crucifixion of Jesus', 'Good Friday', 1, 1, 'IN'),
+(7, '2026-04-14', 'Ambedkar Jayanti', 'NATIONAL', 'Birth anniversary of Dr. B.R. Ambedkar', 'Ambedkar Jayanti', 1, 1, 'IN'),
+(8, '2026-05-25', 'Buddha Purnima', 'RELIGIOUS', 'Birth of Lord Buddha', 'Buddha Purnima', 1, 1, 'IN'),
+(9, '2026-08-15', 'Independence Day', 'NATIONAL', 'Independence from British rule in 1947', 'Independence Day', 1, 1, 'IN'),
+(10, '2026-10-02', 'Gandhi Jayanti', 'NATIONAL', 'Birthday of Mahatma Gandhi', 'Gandhi Jayanti', 1, 1, 'IN'),
+(11, '2026-10-20', 'Diwali', 'PUBLIC', 'Festival of Lights', 'Diwali', 1, 1, 'IN'),
+(12, '2026-11-30', 'Guru Nanak Jayanti', 'RELIGIOUS', 'Birth of Guru Nanak Dev Ji', 'Guru Nanak Jayanti', 1, 1, 'IN'),
+(13, '2026-12-25', 'Christmas Day', 'RELIGIOUS', 'Birth of Jesus Christ', 'Christmas', 1, 1, 'IN'),
+-- 2025 for IN
+(14, '2025-01-14', 'Makar Sankranti', 'PUBLIC', 'Makar Sankranti', 'Makar Sankranti', 1, 1, 'IN'),
+(15, '2025-01-26', 'Republic Day', 'NATIONAL', 'Republic Day', 'Republic Day', 1, 1, 'IN'),
+(16, '2025-03-08', 'Maha Shivratri', 'RELIGIOUS', 'Maha Shivratri', 'Maha Shivratri', 1, 1, 'IN'),
+(17, '2025-03-14', 'Holi', 'PUBLIC', 'Holi', 'Holi', 1, 1, 'IN'),
+(18, '2025-04-10', 'Ram Navami', 'RELIGIOUS', 'Ram Navami', 'Ram Navami', 1, 1, 'IN'),
+(19, '2025-04-14', 'Ambedkar Jayanti', 'NATIONAL', 'Ambedkar Jayanti', 'Ambedkar Jayanti', 1, 1, 'IN'),
+(20, '2025-04-18', 'Good Friday', 'RELIGIOUS', 'Good Friday', 'Good Friday', 1, 1, 'IN'),
+(21, '2025-05-01', 'Labour Day', 'PUBLIC', 'Labour Day', 'Labour Day', 1, 1, 'IN'),
+(22, '2025-05-23', 'Buddha Purnima', 'RELIGIOUS', 'Buddha Purnima', 'Buddha Purnima', 1, 1, 'IN'),
+(23, '2025-06-06', 'Bakrid / Eid al-Adha', 'RELIGIOUS', 'Bakrid / Eid al-Adha', 'Bakrid / Eid al-Adha', 1, 1, 'IN'),
+(24, '2025-07-28', 'Muharram', 'RELIGIOUS', 'Muharram', 'Muharram', 1, 1, 'IN'),
+(25, '2025-08-15', 'Independence Day', 'NATIONAL', 'Independence Day', 'Independence Day', 1, 1, 'IN'),
+(26, '2025-08-18', 'Raksha Bandhan', 'CULTURAL', 'Raksha Bandhan', 'Raksha Bandhan', 1, 1, 'IN'),
+(27, '2025-08-27', 'Janmashtami', 'RELIGIOUS', 'Janmashtami', 'Janmashtami', 1, 1, 'IN'),
+(28, '2025-10-02', 'Gandhi Jayanti', 'NATIONAL', 'Gandhi Jayanti', 'Gandhi Jayanti', 1, 1, 'IN'),
+(29, '2025-10-19', 'Diwali', 'PUBLIC', 'Diwali', 'Diwali', 1, 1, 'IN'),
+(30, '2025-10-21', 'Govardhan Puja', 'RELIGIOUS', 'Govardhan Puja', 'Govardhan Puja', 1, 1, 'IN'),
+(31, '2025-10-22', 'Bhai Dooj', 'CULTURAL', 'Bhai Dooj', 'Bhai Dooj', 1, 1, 'IN'),
+(32, '2025-11-03', 'Chhath Puja', 'PUBLIC', 'Chhath Puja', 'Chhath Puja', 1, 1, 'IN'),
+(33, '2025-12-25', 'Christmas Day', 'RELIGIOUS', 'Christmas Day', 'Christmas Day', 1, 1, 'IN');
+
+
+-- US Holidays for 2025
+(34, '2025-01-01', 'New Year''s Day', 'PUBLIC', 'New Year''s Day Celebration', 'New Year''s Day', 1, 1, 'US'),
+(35, '2025-01-20', 'Martin Luther King Jr. Day', 'NATIONAL', 'Honors civil rights leader Martin Luther King Jr.', 'MLK Day', 1, 1, 'US'),
+(36, '2025-02-17', 'Presidents'' Day', 'NATIONAL', 'Honors all U.S. presidents, especially George Washington and Abraham Lincoln', 'Presidents'' Day', 1, 1, 'US'),
+(37, '2025-05-26', 'Memorial Day', 'NATIONAL', 'Honors the U.S. military personnel who died in service', 'Memorial Day', 1, 1, 'US'),
+(38, '2025-06-19', 'Juneteenth National Independence Day', 'NATIONAL', 'Commemorates the end of slavery in the United States', 'Juneteenth', 1, 1, 'US'),
+(39, '2025-07-04', 'Independence Day', 'NATIONAL', 'Commemorates the adoption of the Declaration of Independence', '4th of July', 1, 1, 'US'),
+(40, '2025-09-01', 'Labor Day', 'PUBLIC', 'Celebrates the contributions of workers', 'Labor Day', 1, 1, 'US'),
+(41, '2025-10-13', 'Columbus Day', 'NATIONAL', 'Honors the arrival of Christopher Columbus in the Americas', 'Columbus Day', 1, 1, 'US'),
+(42, '2025-11-11', 'Veterans Day', 'NATIONAL', 'Honors military veterans', 'Veterans Day', 1, 1, 'US'),
+(43, '2025-11-27', 'Thanksgiving Day', 'PUBLIC', 'Celebrates harvest and blessings of the past year', 'Thanksgiving', 1, 1, 'US'),
+(44, '2025-12-25', 'Christmas Day', 'RELIGIOUS', 'Celebration of the birth of Jesus Christ', 'Christmas Day', 1, 1, 'US'),
+-- US Holidays for 2026
+(45, '2026-01-01', 'New Year''s Day', 'PUBLIC', 'New Year''s Day Celebration', 'New Year''s Day', 1, 1, 'US'),
+(46, '2026-01-19', 'Martin Luther King Jr. Day', 'NATIONAL', 'Honors civil rights leader Martin Luther King Jr.', 'MLK Day', 1, 1, 'US'),
+(47, '2026-02-16', 'Presidents'' Day', 'NATIONAL', 'Honors all U.S. presidents, especially George Washington and Abraham Lincoln', 'Presidents'' Day', 1, 1, 'US'),
+(48, '2026-05-25', 'Memorial Day', 'NATIONAL', 'Honors the U.S. military personnel who died in service', 'Memorial Day', 1, 1, 'US'),
+(49, '2026-06-19', 'Juneteenth National Independence Day', 'NATIONAL', 'Commemorates the end of slavery in the United States', 'Juneteenth', 1, 1, 'US'),
+(50, '2026-07-04', 'Independence Day', 'NATIONAL', 'Commemorates the adoption of the Declaration of Independence', '4th of July', 1, 1, 'US'),
+(51, '2026-09-07', 'Labor Day', 'PUBLIC', 'Celebrates the contributions of workers', 'Labor Day', 1, 1, 'US'),
+(52, '2026-10-12', 'Columbus Day', 'NATIONAL', 'Honors the arrival of Christopher Columbus in the Americas', 'Columbus Day', 1, 1, 'US'),
+(53, '2026-11-11', 'Veterans Day', 'NATIONAL', 'Honors military veterans', 'Veterans Day', 1, 1, 'US'),
+(54, '2026-11-26', 'Thanksgiving Day', 'PUBLIC', 'Celebrates harvest and blessings of the past year', 'Thanksgiving', 1, 1, 'US'),
+(55, '2026-12-25', 'Christmas Day', 'RELIGIOUS', 'Celebration of the birth of Jesus Christ', 'Christmas Day', 1, 1, 'US');
+
+
+
+										

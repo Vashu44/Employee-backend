@@ -1,0 +1,113 @@
+{% extends "admin/base.html" %}
+
+{% block title %}User Company Details{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between space-y-2">
+            <div>
+                <a href="/admin/company details/user_company_details" class="btn btn-outline-primary btn-sm">
+                    <i class="ti ti-arrow-left"></i>
+                    Back to All Users
+                </a>
+            </div>
+            <h3 class="card-title">User Company Details</h3>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <!-- User Basic Info -->
+            <div class="col-md-4 mb-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Basic Information</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-1">
+                            <label class="form-label">User ID : <span class="text-secondary"></span>{{ user.id }}</span></label>
+                        </div>
+                        <div class="mb-1">
+                            <label class="form-label">Username : <span class="text-secondary">{{ user.username }}</span></label>
+                        </div>
+                        <div class="mb-1">
+                            <label class="form-label">Email : <span class="text-secondary">{{ user.email }}</span></label>
+                        </div>
+                        <div class="mb-1">
+                            <label class="form-label">Role : <span class="text-secondary">{{ user.role }}</span></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Details -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Personal Information</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="">
+                            <label class="form-label">Full Name : <span class="text-secondary">{{user_detail.full_name or 'Not provided'}}</span></label>
+                        </div>
+                        <div class="mb-1">
+                            <label class="form-label">Personal Email : <span class="text-secondary">{{ user_detail.personal_email or 'Not provided' }}</span></label>
+                            </div>
+                        <div class="mb-1">
+                            <label class="form-label">Date of Joining : <span class="text-secondary">{{ user_detail.date_of_joining.strftime('%Y-%m-%d') if user_detail.date_of_joining else 'Not provided' }}</span></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Employment Details -->
+            <div class="col-md-3 mb-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Employment Details</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-1">
+                            <label class="form-label">Department : <span class="text-secondary">{{ user_detail.current_Department or 'Not assigned' }}</span></label>
+                        </div>
+                        <div class="mb-1">
+                            <label class="form-label">Current Role : <span class="text-secondary">{{ user_detail.current_role or 'Not assigned' }}</span></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Project Details -->
+            <div class="col-md-6 mb-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="card-title">Project Details</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-1">
+                            <label class="form-label">Project Name : <span class="text-secondary">{{ user_detail.Project_name or 'Not assigned' }}</span></label>
+                        </div>
+                        <div class="mb-1">
+                            <label class="form-label">Project Start Date : <span class="text-secondary">{{ user_detail.project_Start_date.strftime('%Y-%m-%d') if user_detail.project_Start_date else 'Not specified' }}</span></label>
+                        </div>
+                        <div class="mb-1">
+                            <label class="form-label">Project End Date : <span class="text-secondary">{{ user_detail.project_End_date.strftime('%Y-%m-%d') if user_detail.project_End_date else 'Not specified' }}</span></label>
+                        </div>
+                        <div class="mb-1">
+                            <label class="form-label">Project Description : <span class="text-secondary">{{ user_detail.project_description or 'No description provided' }}</span></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="mt-2">
+            <a href="/admin/company details/edit/{{ user_detail.user_id }}" class="btn btn-primary">
+                <i class="ti ti-edit"></i>
+                Edit Details
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

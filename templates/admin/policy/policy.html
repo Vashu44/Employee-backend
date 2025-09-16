@@ -1,0 +1,947 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Policy Management Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .card-header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .table-actions .btn {
+            margin: 0 2px;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1055;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1050;
+            display: none;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 25px;
+            font-size: 0.875rem;
+            z-index: 1000;
+        }
+        .connection-online {
+            background-color: #28a745;
+            color: white;
+        }
+        .connection-offline {
+            background-color: #dc3545;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Connection Status -->
+    <div class="connection-status connection-offline" id="connection-status">
+        <i class="bi bi-wifi-off"></i> Connecting...
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+
+    <div class="container-fluid mt-4">
+        <!-- Dashboard Stats -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stats-card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Total Policies</h5>
+                        <h2 id="total-policies">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Departments</h5>
+                        <h2 id="total-departments">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">With PDFs</h5>
+                        <h2 id="policies-with-pdf">0</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Recent Updates</h5>
+                        <h2 id="recent-updates">0</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Policy Management -->
+        <div class="card">
+            <div class="card-header card-header-flex">
+                <h3 class="card-title mb-0">
+                    <i class="bi bi-file-earmark-text"></i> Policy Management System
+                </h3>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#policyModal" id="add-new-btn">
+                    <i class="bi bi-plus-circle"></i> Add New Policy
+                </button>
+            </div>
+            <div class="card-body">
+                <!-- Filters and Search -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input type="text" id="search-input" class="form-control" placeholder="Search by name or description...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="department-filter" class="form-select">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="category-filter" class="form-select">
+                            <option value="">All Categories</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-outline-secondary w-100" id="refresh-btn">
+                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Policies Table -->
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-dark">
+                            <tr>
+                                <th><i class="bi bi-hash"></i> ID</th>
+                                <th><i class="bi bi-tag"></i> Name</th>
+                                <th><i class="bi bi-building"></i> Department</th>
+                                <th><i class="bi bi-bookmark"></i> Category</th>
+                                <th><i class="bi bi-calendar"></i> Effective Date</th>
+                                <th><i class="bi bi-person-badge"></i> Roles</th>
+                                <th><i class="bi bi-file-pdf"></i> PDF</th>
+                                <th class="text-center"><i class="bi bi-gear"></i> Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="policies-table-body">
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <div class="mt-2">Loading policies...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <nav aria-label="Policy pagination" class="mt-4">
+                    <ul class="pagination justify-content-center" id="pagination">
+                        <!-- Pagination will be generated by JavaScript -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <!-- Policy Modal -->
+    <div class="modal fade" id="policyModal" tabindex="-1" aria-labelledby="policyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="policyModalLabel">
+                        <i class="bi bi-plus-circle"></i> Add New Policy
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="policy-form" enctype="multipart/form-data">
+                        <input type="hidden" id="policy-id">
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="name" class="form-label">Policy Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="name" required>
+                                <div class="invalid-feedback">Policy name is required.</div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="department" class="form-label">Department <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="department" required list="department-suggestions">
+                                <datalist id="department-suggestions"></datalist>
+                                <div class="invalid-feedback">Department is required.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="policy_category" class="form-label">Policy Category</label>
+                                <input type="text" class="form-control" id="policy_category" list="category-suggestions">
+                                <datalist id="category-suggestions"></datalist>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="effective_date" class="form-label">Effective Date</label>
+                                <input type="date" class="form-control" id="effective_date">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="description" rows="4" required placeholder="Enter policy description..."></textarea>
+                            <div class="invalid-feedback">Description is required.</div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="applicable-roles" class="form-label">Applicable Roles</label>
+                            <select multiple class="form-select" id="applicable-roles" size="8">
+                                <!-- Roles will be populated by JavaScript -->
+                            </select>
+                            <small class="form-text text-muted">Hold Ctrl/Cmd to select multiple roles. Leave empty to apply to all roles.</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="policy_pdf" class="form-label">Policy PDF Document</label>
+                            <input type="file" class="form-control" id="policy_pdf" accept=".pdf">
+                            <small id="current-pdf-info" class="form-text text-muted"></small>
+                            <small class="form-text text-muted">Only PDF files are accepted. Maximum file size: 10MB.</small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </button>
+                    <button type="submit" form="policy-form" class="btn btn-primary" id="save-button">
+                        <i class="bi bi-check-circle"></i> Save Policy
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Policy Details Modal -->
+    <div class="modal fade" id="policyDetailsModal" tabindex="-1" aria-labelledby="policyDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="policyDetailsModalLabel">
+                        <i class="bi bi-file-earmark-text"></i> Policy Details
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="policy-details-content">
+                    <!-- Content will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        class PolicyAdminApp {
+            constructor() {
+                this.API_BASE_URL = "{{ API_BASE_URL }}";
+                this.currentPage = 1;
+                this.itemsPerPage = 10;
+                this.totalItems = 0;
+                this.allPolicies = [];
+                this.filteredPolicies = [];
+                
+                this.initializeElements();
+                this.attachEventListeners();
+                this.initialize();
+            }
+
+            initializeElements() {
+                // Modal elements
+                this.policyModal = new bootstrap.Modal(document.getElementById('policyModal'));
+                this.policyDetailsModal = new bootstrap.Modal(document.getElementById('policyDetailsModal'));
+                
+                // Form elements
+                this.tableBody = document.getElementById('policies-table-body');
+                this.searchInput = document.getElementById('search-input');
+                this.departmentFilter = document.getElementById('department-filter');
+                this.categoryFilter = document.getElementById('category-filter');
+                this.policyForm = document.getElementById('policy-form');
+                this.modalTitle = document.getElementById('policyModalLabel');
+                this.policyIdInput = document.getElementById('policy-id');
+                this.addNewBtn = document.getElementById('add-new-btn');
+                this.rolesSelect = document.getElementById('applicable-roles');
+                this.currentPdfInfo = document.getElementById('current-pdf-info');
+                this.refreshBtn = document.getElementById('refresh-btn');
+                this.loadingOverlay = document.getElementById('loading-overlay');
+                this.connectionStatus = document.getElementById('connection-status');
+                this.pagination = document.getElementById('pagination');
+
+                // Stats elements
+                this.totalPoliciesEl = document.getElementById('total-policies');
+                this.totalDepartmentsEl = document.getElementById('total-departments');
+                this.policiesWithPdfEl = document.getElementById('policies-with-pdf');
+                this.recentUpdatesEl = document.getElementById('recent-updates');
+            }
+
+            attachEventListeners() {
+                // Search and filter events
+                this.searchInput.addEventListener('input', this.debounce(() => this.applyFilters(), 300));
+                this.departmentFilter.addEventListener('change', () => this.applyFilters());
+                this.categoryFilter.addEventListener('change', () => this.applyFilters());
+                this.refreshBtn.addEventListener('click', () => this.initialize());
+                
+                // Form events
+                this.policyForm.addEventListener('submit', (e) => this.handleFormSubmit(e));
+                this.addNewBtn.addEventListener('click', () => this.resetModalForCreate());
+                
+                // Table events
+                this.tableBody.addEventListener('click', (e) => this.handleTableActions(e));
+                
+                // File upload validation
+                document.getElementById('policy_pdf').addEventListener('change', this.validatePdfFile);
+            }
+
+            async initialize() {
+                this.showLoading();
+                try {
+                    await Promise.all([
+                        this.fetchPolicies(),
+                        this.fetchAndPopulateDepartments(),
+                        this.fetchAndPopulateRoles(),
+                        this.fetchStats()
+                    ]);
+                    this.updateConnectionStatus(true);
+                    this.showToast('Connected to database successfully!', 'success');
+                } catch (error) {
+                    console.error('Initialization error:', error);
+                    this.updateConnectionStatus(false);
+                    this.showToast('Failed to connect to database. Please check your connection.', 'danger');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            async fetchPolicies() {
+                try {
+                    const response = await fetch(`${this.API_BASE_URL}/policies?limit=1000`);
+                    if (!response.ok) throw new Error('Failed to fetch policies');
+                    
+                    this.allPolicies = await response.json();
+                    this.applyFilters();
+                    this.populateFilters();
+                } catch (error) {
+                    console.error('Error fetching policies:', error);
+                    this.tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="text-center text-danger py-4">
+                                <i class="bi bi-exclamation-triangle"></i>
+                                <div class="mt-2">Error loading policies. Please check your connection.</div>
+                            </td>
+                        </tr>`;
+                    throw error;
+                }
+            }
+
+            applyFilters() {
+                const search = this.searchInput.value.toLowerCase();
+                const department = this.departmentFilter.value;
+                const category = this.categoryFilter.value;
+
+                this.filteredPolicies = this.allPolicies.filter(policy => {
+                    const matchesSearch = !search || 
+                        policy.name.toLowerCase().includes(search) || 
+                        policy.description.toLowerCase().includes(search);
+                    
+                    const matchesDepartment = !department || policy.department === department;
+                    const matchesCategory = !category || policy.policy_category === category;
+
+                    return matchesSearch && matchesDepartment && matchesCategory;
+                });
+
+                this.currentPage = 1;
+                this.renderTable();
+                this.renderPagination();
+            }
+
+            renderTable() {
+                if (this.filteredPolicies.length === 0) {
+                    this.tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <i class="bi bi-inbox"></i>
+                                <div class="mt-2">No policies found matching your criteria.</div>
+                            </td>
+                        </tr>`;
+                    return;
+                }
+
+                const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+                const endIndex = startIndex + this.itemsPerPage;
+                const currentPolicies = this.filteredPolicies.slice(startIndex, endIndex);
+
+                this.tableBody.innerHTML = '';
+                currentPolicies.forEach(policy => {
+                    const effectiveDate = policy.effective_date ? 
+                        new Date(policy.effective_date).toLocaleDateString() : 
+                        '<span class="text-muted">Not set</span>';
+                    
+                    const rolesDisplay = policy.applicable_roles && policy.applicable_roles.length > 0 ? 
+                        `<span class="badge bg-secondary">${policy.applicable_roles.length} roles</span>` :
+                        '<span class="text-muted">All roles</span>';
+                    
+                    const pdfStatus = policy.pdf_filename ? 
+                        '<i class="bi bi-file-pdf-fill text-success" title="PDF Available"></i>' :
+                        '<i class="bi bi-file-pdf text-muted" title="No PDF"></i>';
+                    
+                    const categoryDisplay = policy.policy_category || 
+                        '<span class="text-muted">Uncategorized</span>';
+
+                    const row = `
+                        <tr>
+                            <td><strong>#${policy.id}</strong></td>
+                            <td>
+                                <div class="fw-bold">${this.escapeHtml(policy.name)}</div>
+                                <small class="text-muted">${this.truncateText(policy.description, 60)}</small>
+                            </td>
+                            <td><span class="badge bg-primary">${this.escapeHtml(policy.department)}</span></td>
+                            <td>${categoryDisplay}</td>
+                            <td>${effectiveDate}</td>
+                            <td>${rolesDisplay}</td>
+                            <td class="text-center">${pdfStatus}</td>
+                            <td class="text-center table-actions">
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-info view-btn" data-id="${policy.id}" title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-success download-btn" data-id="${policy.id}" 
+                                            ${!policy.pdf_path ? 'disabled' : ''} title="Download PDF">
+                                        <i class="bi bi-download"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning edit-btn" data-id="${policy.id}" title="Edit Policy">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger delete-btn" data-id="${policy.id}" title="Delete Policy">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>`;
+                    this.tableBody.insertAdjacentHTML('beforeend', row);
+                });
+            }
+
+            renderPagination() {
+                const totalPages = Math.ceil(this.filteredPolicies.length / this.itemsPerPage);
+                
+                if (totalPages <= 1) {
+                    this.pagination.innerHTML = '';
+                    return;
+                }
+
+                let paginationHTML = '';
+                
+                // Previous button
+                paginationHTML += `
+                    <li class="page-item ${this.currentPage === 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="#" data-page="${this.currentPage - 1}">Previous</a>
+                    </li>`;
+
+                // Page numbers
+                for (let i = 1; i <= totalPages; i++) {
+                    if (i === 1 || i === totalPages || (i >= this.currentPage - 2 && i <= this.currentPage + 2)) {
+                        paginationHTML += `
+                            <li class="page-item ${i === this.currentPage ? 'active' : ''}">
+                                <a class="page-link" href="#" data-page="${i}">${i}</a>
+                            </li>`;
+                    } else if (i === this.currentPage - 3 || i === this.currentPage + 3) {
+                        paginationHTML += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                    }
+                }
+
+                // Next button
+                paginationHTML += `
+                    <li class="page-item ${this.currentPage === totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="#" data-page="${this.currentPage + 1}">Next</a>
+                    </li>`;
+
+                this.pagination.innerHTML = paginationHTML;
+                
+                // Add click event listeners to pagination links
+                this.pagination.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const page = parseInt(e.target.getAttribute('data-page'));
+                    if (page && page !== this.currentPage && page >= 1 && page <= totalPages) {
+                        this.currentPage = page;
+                        this.renderTable();
+                        this.renderPagination();
+                    }
+                });
+            }
+
+            populateFilters() {
+                // Populate category filter
+                const categories = [...new Set(this.allPolicies
+                    .map(p => p.policy_category)
+                    .filter(c => c))];
+                
+                const currentCategory = this.categoryFilter.value;
+                this.categoryFilter.innerHTML = '<option value="">All Categories</option>';
+                categories.sort().forEach(category => {
+                    const option = `<option value="${this.escapeHtml(category)}">${this.escapeHtml(category)}</option>`;
+                    this.categoryFilter.insertAdjacentHTML('beforeend', option);
+                });
+                this.categoryFilter.value = currentCategory;
+
+                // Update category suggestions
+                const categorySuggestions = document.getElementById('category-suggestions');
+                categorySuggestions.innerHTML = '';
+                categories.forEach(category => {
+                    categorySuggestions.insertAdjacentHTML('beforeend', `<option value="${this.escapeHtml(category)}">`);
+                });
+            }
+
+            async fetchAndPopulateDepartments() {
+                try {
+                    const response = await fetch(`${this.API_BASE_URL}/departments`);
+                    const departments = await response.json();
+                    
+                    const currentDept = this.departmentFilter.value;
+                    this.departmentFilter.innerHTML = '<option value="">All Departments</option>';
+                    departments.forEach(dept => {
+                        this.departmentFilter.insertAdjacentHTML('beforeend', 
+                            `<option value="${this.escapeHtml(dept)}">${this.escapeHtml(dept)}</option>`);
+                    });
+                    this.departmentFilter.value = currentDept;
+
+                    // Update department suggestions
+                    const deptSuggestions = document.getElementById('department-suggestions');
+                    deptSuggestions.innerHTML = '';
+                    departments.forEach(dept => {
+                        deptSuggestions.insertAdjacentHTML('beforeend', `<option value="${this.escapeHtml(dept)}">`);
+                    });
+                } catch (error) {
+                    console.error('Failed to fetch departments:', error);
+                }
+            }
+
+            async fetchAndPopulateRoles() {
+                try {
+                    const response = await fetch(`${this.API_BASE_URL}/roles`);
+                    const roles = await response.json();
+                    
+                    this.rolesSelect.innerHTML = '';
+                    roles.forEach(role => {
+                        const option = `<option value="${role.code}" title="${this.escapeHtml(role.description)}">${role.level} - ${this.escapeHtml(role.name)}</option>`;
+                        this.rolesSelect.insertAdjacentHTML('beforeend', option);
+                    });
+                } catch (error) {
+                    console.error('Failed to fetch roles:', error);
+                }
+            }
+
+            async fetchStats() {
+                try {
+                    // Update total policies
+                    this.totalPoliciesEl.textContent = this.allPolicies.length;
+                    
+                    // Update departments count
+                    const departments = [...new Set(this.allPolicies.map(p => p.department))];
+                    this.totalDepartmentsEl.textContent = departments.length;
+                    
+                    // Update policies with PDF count
+                    const withPdf = this.allPolicies.filter(p => p.pdf_filename).length;
+                    this.policiesWithPdfEl.textContent = withPdf;
+                    
+                    // Update recent updates (last 30 days)
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+                    const recentUpdates = this.allPolicies.filter(p => 
+                        new Date(p.updated_at) > thirtyDaysAgo).length;
+                    this.recentUpdatesEl.textContent = recentUpdates;
+                } catch (error) {
+                    console.error('Error calculating stats:', error);
+                }
+            }
+
+            async handleFormSubmit(e) {
+                e.preventDefault();
+                
+                if (!this.validateForm()) {
+                    return;
+                }
+
+                const id = this.policyIdInput.value;
+                const isEditing = !!id;
+                this.showLoading();
+
+                const formData = new FormData();
+                formData.append('name', document.getElementById('name').value.trim());
+                formData.append('department', document.getElementById('department').value.trim());
+                formData.append('description', document.getElementById('description').value.trim());
+                formData.append('policy_category', document.getElementById('policy_category').value.trim());
+                formData.append('effective_date', document.getElementById('effective_date').value);
+
+                const selectedRoles = Array.from(this.rolesSelect.selectedOptions).map(option => option.value);
+                formData.append('applicable_roles', JSON.stringify(selectedRoles));
+
+                const pdfFile = document.getElementById('policy_pdf').files[0];
+                if (pdfFile) {
+                    formData.append('policy_pdf', pdfFile);
+                }
+
+                const url = isEditing ? `${this.API_BASE_URL}/policies/${id}` : `${this.API_BASE_URL}/policies`;
+                const method = isEditing ? 'PUT' : 'POST';
+
+                try {
+                    const response = await fetch(url, { method, body: formData });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || 'Failed to save policy');
+                    }
+                    
+                    this.policyModal.hide();
+                    await this.fetchPolicies();
+                    this.showToast(
+                        `Policy ${isEditing ? 'updated' : 'created'} successfully!`, 
+                        'success'
+                    );
+                } catch (error) {
+                    console.error('Error saving policy:', error);
+                    this.showToast(`Error: ${error.message}`, 'danger');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            validateForm() {
+                const form = this.policyForm;
+                const requiredFields = form.querySelectorAll('[required]');
+                let isValid = true;
+
+                requiredFields.forEach(field => {
+                    if (!field.value.trim()) {
+                        field.classList.add('is-invalid');
+                        isValid = false;
+                    } else {
+                        field.classList.remove('is-invalid');
+                    }
+                });
+
+                return isValid;
+            }
+
+            validatePdfFile(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                        alert('File size must be less than 10MB');
+                        event.target.value = '';
+                        return false;
+                    }
+                    if (file.type !== 'application/pdf') {
+                        alert('Only PDF files are allowed');
+                        event.target.value = '';
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            async handleTableActions(e) {
+                const target = e.target.closest('button');
+                if (!target) return;
+                
+                const id = target.dataset.id;
+                
+                if (target.classList.contains('delete-btn')) {
+                    if (confirm('Are you sure you want to delete this policy? This action cannot be undone.')) {
+                        await this.deletePolicy(id);
+                    }
+                } else if (target.classList.contains('edit-btn')) {
+                    await this.openModalForEdit(id);
+                } else if (target.classList.contains('download-btn')) {
+                    this.downloadPolicyPdf(id);
+                } else if (target.classList.contains('view-btn')) {
+                    await this.viewPolicyDetails(id);
+                }
+            }
+
+            async deletePolicy(id) {
+                this.showLoading();
+                try {
+                    const response = await fetch(`${this.API_BASE_URL}/policies/${id}`, { 
+                        method: 'DELETE' 
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to delete policy');
+                    
+                    await this.fetchPolicies();
+                    this.showToast('Policy deleted successfully!', 'success');
+                } catch (error) {
+                    console.error('Error deleting policy:', error);
+                    this.showToast(`Error: ${error.message}`, 'danger');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            downloadPolicyPdf(id) {
+                window.open(`${this.API_BASE_URL}/policies/${id}/download`, '_blank');
+            }
+
+            async viewPolicyDetails(id) {
+                try {
+                    const response = await fetch(`${this.API_BASE_URL}/policies/${id}`);
+                    if (!response.ok) throw new Error('Policy not found');
+                    
+                    const policy = await response.json();
+                    this.showPolicyDetails(policy);
+                } catch (error) {
+                    console.error('Error fetching policy details:', error);
+                    this.showToast('Could not load policy details', 'danger');
+                }
+            }
+
+            showPolicyDetails(policy) {
+                const effectiveDate = policy.effective_date ? 
+                    new Date(policy.effective_date).toLocaleDateString() : 'Not specified';
+                
+                const rolesDisplay = policy.applicable_roles && policy.applicable_roles.length > 0 ? 
+                    policy.applicable_roles.join(', ') : 'All roles';
+
+                const pdfInfo = policy.pdf_filename ? 
+                    `<p><strong>PDF Document:</strong> ${policy.pdf_filename} 
+                     <a href="${this.API_BASE_URL}/policies/${policy.id}/download" target="_blank" class="btn btn-sm btn-outline-primary ms-2">
+                         <i class="bi bi-download"></i> Download
+                     </a></p>` : 
+                    '<p><strong>PDF Document:</strong> <span class="text-muted">No document attached</span></p>';
+
+                const createdAt = new Date(policy.created_at).toLocaleString();
+                const updatedAt = new Date(policy.updated_at).toLocaleString();
+
+                document.getElementById('policy-details-content').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">Policy Information</h6>
+                            <p><strong>ID:</strong> #${policy.id}</p>
+                            <p><strong>Name:</strong> ${this.escapeHtml(policy.name)}</p>
+                            <p><strong>Department:</strong> <span class="badge bg-primary">${this.escapeHtml(policy.department)}</span></p>
+                            <p><strong>Category:</strong> ${policy.policy_category || '<span class="text-muted">Uncategorized</span>'}</p>
+                            <p><strong>Effective Date:</strong> ${effectiveDate}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-2">Additional Details</h6>
+                            <p><strong>Applicable Roles:</strong> ${rolesDisplay}</p>
+                            ${pdfInfo}
+                            <p><strong>Created:</strong> ${createdAt}</p>
+                            <p><strong>Last Updated:</strong> ${updatedAt}</p>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <h6 class="text-muted mb-2">Description</h6>
+                        <div class="border rounded p-3 bg-light">
+                            ${this.escapeHtml(policy.description).replace(/\n/g, '<br>')}
+                        </div>
+                    </div>
+                `;
+
+                this.policyDetailsModal.show();
+            }
+
+            async openModalForEdit(id) {
+                this.showLoading();
+                try {
+                    const response = await fetch(`${this.API_BASE_URL}/policies/${id}`);
+                    if (!response.ok) throw new Error('Policy not found');
+                    
+                    const policy = await response.json();
+                    
+                    this.modalTitle.innerHTML = '<i class="bi bi-pencil-square"></i> Edit Policy';
+                    this.policyIdInput.value = policy.id;
+                    document.getElementById('name').value = policy.name;
+                    document.getElementById('department').value = policy.department;
+                    document.getElementById('description').value = policy.description;
+                    document.getElementById('policy_category').value = policy.policy_category || '';
+                    document.getElementById('effective_date').value = policy.effective_date || '';
+
+                    // Clear previous selections and set applicable roles
+                    Array.from(this.rolesSelect.options).forEach(option => {
+                        option.selected = policy.applicable_roles && 
+                            policy.applicable_roles.includes(option.value);
+                    });
+
+                    // Update PDF info
+                    this.currentPdfInfo.innerHTML = policy.pdf_filename ? 
+                        `<i class="bi bi-file-pdf-fill text-success"></i> Current file: <strong>${policy.pdf_filename}</strong><br>
+                         <small>Uploading a new file will replace the existing one.</small>` :
+                        '<i class="bi bi-info-circle text-info"></i> No PDF document currently attached to this policy.';
+
+                    this.policyModal.show();
+                } catch (error) {
+                    console.error('Error loading policy for edit:', error);
+                    this.showToast('Could not load policy data for editing.', 'danger');
+                } finally {
+                    this.hideLoading();
+                }
+            }
+
+            resetModalForCreate() {
+                this.modalTitle.innerHTML = '<i class="bi bi-plus-circle"></i> Add New Policy';
+                this.policyForm.reset();
+                this.policyIdInput.value = '';
+                this.currentPdfInfo.innerHTML = '';
+                
+                // Clear validation classes
+                this.policyForm.querySelectorAll('.is-invalid').forEach(el => {
+                    el.classList.remove('is-invalid');
+                });
+
+                // Set default effective date to today
+                document.getElementById('effective_date').value = new Date().toISOString().split('T')[0];
+            }
+
+            // Utility methods
+            showLoading() {
+                this.loadingOverlay.style.display = 'flex';
+            }
+
+            hideLoading() {
+                this.loadingOverlay.style.display = 'none';
+            }
+
+            updateConnectionStatus(isOnline) {
+                this.connectionStatus.className = `connection-status ${isOnline ? 'connection-online' : 'connection-offline'}`;
+                this.connectionStatus.innerHTML = isOnline ? 
+                    '<i class="bi bi-wifi"></i> Connected' : 
+                    '<i class="bi bi-wifi-off"></i> Disconnected';
+            }
+
+            showToast(message, type = 'info') {
+                const toastContainer = document.querySelector('.toast-container');
+                const toastId = `toast-${Date.now()}`;
+                
+                const toast = document.createElement('div');
+                toast.className = `toast align-items-center text-bg-${type} border-0`;
+                toast.setAttribute('role', 'alert');
+                toast.setAttribute('aria-live', 'assertive');
+                toast.setAttribute('aria-atomic', 'true');
+                toast.setAttribute('id', toastId);
+                
+                toast.innerHTML = `
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="bi bi-${this.getToastIcon(type)}"></i> ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" 
+                                data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                `;
+                
+                toastContainer.appendChild(toast);
+                
+                const bsToast = new bootstrap.Toast(toast, { delay: 5000 });
+                bsToast.show();
+                
+                // Clean up after toast is hidden
+                toast.addEventListener('hidden.bs.toast', () => {
+                    toast.remove();
+                });
+            }
+
+            getToastIcon(type) {
+                const icons = {
+                    'success': 'check-circle',
+                    'danger': 'exclamation-triangle',
+                    'warning': 'exclamation-circle',
+                    'info': 'info-circle'
+                };
+                return icons[type] || icons['info'];
+            }
+
+            debounce(func, wait) {
+                let timeout;
+                return function executedFunction(...args) {
+                    const later = () => {
+                        clearTimeout(timeout);
+                        func(...args);
+                    };
+                    clearTimeout(timeout);
+                    timeout = setTimeout(later, wait);
+                };
+            }
+
+            escapeHtml(text) {
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return text ? text.replace(/[&<>"']/g, m => map[m]) : '';
+            }
+
+            truncateText(text, maxLength) {
+                if (!text) return '';
+                return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+            }
+        }
+
+        // Initialize the application when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            window.policyAdmin = new PolicyAdminApp();
+        });
+
+        // Add periodic connection check
+        setInterval(() => {
+            if (window.policyAdmin) {
+                fetch(`${window.policyAdmin.API_BASE_URL}/policies/count`)
+                    .then(response => {
+                        window.policyAdmin.updateConnectionStatus(response.ok);
+                    })
+                    .catch(() => {
+                        window.policyAdmin.updateConnectionStatus(false);
+                    });
+            }
+        }, 30000); // Check every 30 seconds
+    </script>
+{% endblock %}

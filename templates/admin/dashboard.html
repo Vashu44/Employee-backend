@@ -1,0 +1,145 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Refresh button similar to the example -->
+<div class="d-flex justify-content-end mb-3">
+    <button class="btn btn-primary" onclick="location.reload();">
+        <i class="ti ti-refresh me-1"></i> Refresh All
+    </button>
+</div>
+
+<!-- Stats cards in a row -->
+<div class="row mb-4 md:space-x-2">
+    <!-- Total Users Card -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h3>Total Users</h3>
+                <div class="d-flex align-items-center">
+                    <h1 class="display-4 mb-0">{{ user_count }}</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Active Sessions Card -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h3>Active Sessions</h3>
+                <div class="d-flex align-items-center">
+                    <h1 class="display-4 mb-0">1</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Status Card -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h3>System Status</h3>
+                <div>
+                    <h1 class="text-success mb-0">online</h1>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- User Management Section -->
+<div class="mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>User Management</h2>
+        <a href="/admin/user/users/new" class="btn btn-success">
+            <i class="ti ti-plus me-1"></i> Create User
+        </a>
+    </div>
+    
+    <!-- Search Bar -->
+    <div class="mb-3">
+        <input type="text" class="form-control" placeholder="Search users..." id="userSearch">
+    </div>
+    
+    <!-- Users Table -->
+    <div class="card space-x-4">
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+                <thead>
+                    <tr>
+                        <th>USERNAME</th>
+                        <th>EMAIL</th>
+                        <th>SUPERUSER</th>
+                        <th>ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td>{% if user.role == 'admin' %}Yes{% else %}No({{ user.role }}){% endif %}</td>
+                        <td>
+                            <div class="btn-list flex-nowrap">
+                                <a href="/admin/user/view/{{ user.id }}" class="btn btn-md btn-primary">
+                                    <i class="ti ti-eye me-1"></i>
+                                    View
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity Section -->
+<div>
+    <h2 class="mb-3">Recent Activity</h2>
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+                <thead>
+                    <tr>
+                        <th>EVENT</th>
+                        <th>USER</th>
+                        <th>DETAILS</th>
+                        <th>TIME</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Login</td>
+                        <td>{{ admin_name }}</td>
+                        <td>Admin login successful</td>
+                        <td>Just now</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Simple search functionality for the user table
+    document.getElementById('userSearch').addEventListener('keyup', function() {
+        const searchText = this.value.toLowerCase();
+        const tableRows = document.querySelectorAll('tbody tr');
+        
+        tableRows.forEach(row => {
+            const username = row.cells[0].textContent.toLowerCase();
+            const email = row.cells[1].textContent.toLowerCase();
+            
+            if (username.includes(searchText) || email.includes(searchText)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}
