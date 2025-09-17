@@ -73,17 +73,9 @@ app.mount("/static", StaticFiles(directory="./static"), name="static")
 app.include_router(find_weather, tags=["Weather"])
 app.mount("/admin", admin_panel)
 
-# Configure CORS safely: support comma-separated REACT_APP_API_URL or fall back to localhost
-if REACT_APP_API_URL:
-    allowed_origins = [o.strip() for o in REACT_APP_API_URL.split(",") if o.strip()]
-else:
-    allowed_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
-
-print("CORS allowed_origins:", allowed_origins)
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=[REACT_APP_API_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

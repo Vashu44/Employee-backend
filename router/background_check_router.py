@@ -1,14 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException,status
-from fastapi.responses import StreamingResponse
 from sqlalchemy import Date as SQLADate
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime, date
 from model.background_model import BackgroundCheckForm
-from fastapi.responses import StreamingResponse
-from io import BytesIO
-from xhtml2pdf import pisa
 from Schema.background_schema import (
     BackgroundCheckFormCreate,
     BackgroundCheckFormResponse,
@@ -601,6 +597,128 @@ async def get_form_by_id(form_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Error retrieving form: {str(e)}")
 
 
+@router.put("/form/{form_id}/approve")
+async def approve_form(
+    form_id: int, 
+    approval_data: ApprovalRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Approve or reject a background check form
+    """
+    try:
+        # Find the form
+        form = db.query(BackgroundCheckForm).filter(BackgroundCheckForm.id == form_id).first()
+        if not form:
+            raise HTTPException(status_code=404, detail="Form not found")
+        
+        # Validate action
+        if approval_data.action not in ["approve", "reject"]:
+            raise HTTPException(status_code=400, detail="Action must be 'approve' or 'reject'")
+        
+        # Update the form status
+        form.status = "approved" if approval_data.action == "approve" else "rejected"
+        
+        # Add remarks if provided
+        if approval_data.remarks:
+            form.remarks = approval_data.remarks
+        
+        # Set approval/rejection timestamp
+        form.processed_at = datetime.utcnow()
+        
+        db.commit()
+        db.refresh(form)
+        
+        return {
+            "message": f"Form {approval_data.action}d successfully",
+            "form_id": form_id,
+            "status": form.status,
+            "processed_at": form.processed_at.isoformat() if form.processed_at else None # Ensure datetime is JSON serializable
+        }
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error processing form: {str(e)}")
+
+
+@router.delete("/form/{form_id}")
+async def delete_form(form_id: int, db: Session = Depends(get_db)):
+    try:
+        form = db.query(BackgroundCheckForm).filter(BackgroundCheckForm.id == form_id).first()
+        if not form:
+            raise HTTPException(status_code=404, detail="Form not found")
+
+        db.delete(form)
+        db.commit()
+        return {"message": "Form deleted successfully"}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error deleting form: {str(e)}")
+
+
+@router.get("/forms/pending")
+async def get_pending_forms(db: Session = Depends(get_db)):
+    """
+    Get all pending background check forms
+    """
+    try:
+        forms = db.query(BackgroundCheckForm).filter(BackgroundCheckForm.status == "pending").all()
+        return [
+            BackgroundCheckFormResponse(
+                id=form.id,
+                candidate_name=form.candidate_name,
+                email_id=form.email_id,
+                contact_number=form.contact_number,
+                created_at=form.created_at,
+                status=form.status
+            ) for form in forms
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving pending forms: {str(e)}")
+
+
+@router.get("/forms/approved")
+async def get_approved_forms(db: Session = Depends(get_db)):
+    """
+    Get all approved background check forms
+    """
+    try:
+        forms = db.query(BackgroundCheckForm).filter(BackgroundCheckForm.status == "approved").all()
+        return [
+            BackgroundCheckFormResponse(
+                id=form.id,
+                candidate_name=form.candidate_name,
+                email_id=form.email_id,
+                contact_number=form.contact_number,
+                created_at=form.created_at,
+                status=form.status
+            ) for form in forms
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving approved forms: {str(e)}")
+
+
+@router.get("/forms/rejected")
+async def get_rejected_forms(db: Session = Depends(get_db)):
+    """
+    Get all rejected background check forms
+    """
+    try:
+        forms = db.query(BackgroundCheckForm).filter(BackgroundCheckForm.status == "rejected").all()
+        return [
+            BackgroundCheckFormResponse(
+                id=form.id,
+                candidate_name=form.candidate_name,
+                email_id=form.email_id,
+                contact_number=form.contact_number,
+                created_at=form.created_at,
+                status=form.status
+            ) for form in forms
+        ]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving rejected forms: {str(e)}")
+
+
 @router.get("/profile/{email_id}")
 async def get_profile_by_email(email_id: str, db: Session = Depends(get_db)):
     """
@@ -631,298 +749,60 @@ async def get_profile_by_email(email_id: str, db: Session = Depends(get_db)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving profile: {str(e)}")
 
-
-@router.get("/form/{form_id}/download/{format}")
-async def download_form_document(form_id: int, format: str, db: Session = Depends(get_db)):
+@router.get("/birthdays/today")
+async def get_todays_birthdays(db: Session = Depends(get_db)):
     """
-    Generates and returns a complete, well-formatted PDF document for a given form ID.
-    (Final version with all layouts and styles corrected)
+    Get all users who have birthdays today
     """
-    if format.lower() != 'pdf':
-        raise HTTPException(status_code=400, detail="Only 'pdf' is supported.")
-
-    form = db.query(BackgroundCheckForm).filter(BackgroundCheckForm.id == form_id).first()
-    if not form:
-        raise HTTPException(status_code=404, detail="Form not found")
-
-    # Helper functions
-    def safe_str(value):
-        return str(value) if value is not None else ""
-
-    def format_date(value):
-        if value is None: return ""
-        if isinstance(value, (datetime, date)): return value.strftime('%d/%m/%Y')
-        return str(value)
-
-    def to_title_case(s):
-        return s.title() if s else ""
+    try:
+        today = datetime.now()
+        today_month = today.month
+        today_day = today.day
         
-    def get_check_char(check_value):
-        if isinstance(check_value, str):
-            check_value = check_value.lower() == 'true'
-        return "&#10003;" if check_value else ""
-
-    # Generating HTML "cards" for education details
-    education_html = ""
-    if isinstance(form.education_details, list) and form.education_details:
-        for i, edu in enumerate(form.education_details):
-            if isinstance(edu, dict):
-                education_html += f"""
-                <div class="entry-card">
-                    <div class="section-subtitle">Education #{i+1}</div>
-                    <table class="detail-table">
-                        <tr><td class="detail-label">Institute Name</td><td class="detail-value">{safe_str(edu.get('institution_name'))}</td></tr>
-                        <tr><td class="detail-label">Course/Degree</td><td class="detail-value">{safe_str(edu.get('degree'))}</td></tr>
-                        <tr><td class="detail-label">Passing Year</td><td class="detail-value">{safe_str(edu.get('year_of_passing'))}</td></tr>
-                        <tr><td class="detail-label">Reg. No./CGPA</td><td class="detail-value">{safe_str(edu.get('percentage_or_cgpa'))}</td></tr>
-                        <tr><td class="detail-label">Mode</td><td class="detail-value">{safe_str(edu.get('mode'))}</td></tr>
-                    </table>
-                </div>
-                """
-    else:
-        education_html = "<p>No education details provided.</p>"
-
-    # Generating HTML "cards" for HR details
-    hr_html = ""
-    if isinstance(form.hr_details, list) and form.hr_details:
-        for i, hr in enumerate(form.hr_details):
-            if isinstance(hr, dict):
-                hr_html += f"""
-                <div class="entry-card">
-                    <div class="section-subtitle">HR Contact #{i+1}</div>
-                    <table class="detail-table">
-                        <tr><td class="detail-label">Name</td><td class="detail-value">{safe_str(hr.get('hr_name'))}</td></tr>
-                        <tr><td class="detail-label">Contact Number</td><td class="detail-value">{safe_str(hr.get('hr_contact_number'))}</td></tr>
-                        <tr><td class="detail-label">Email ID</td><td class="detail-value">{safe_str(hr.get('hr_email_id'))}</td></tr>
-                    </table>
-                </div>
-                """
-    else:
-        hr_html = "<p>No HR details provided.</p>"
-
-    # Generating HTML "cards" for Reference details
-    reference_html = ""
-    if isinstance(form.reference_details, list) and form.reference_details:
-        for i, ref in enumerate(form.reference_details):
-            if isinstance(ref, dict):
-                reference_html += f"""
-                <div class="entry-card">
-                    <div class="section-subtitle">Reference #{i+1}</div>
-                    <table class="detail-table">
-                        <tr><td class="detail-label">Referee Name</td><td class="detail-value">{safe_str(ref.get('ref_name'))}</td></tr>
-                        <tr><td class="detail-label">Organization</td><td class="detail-value">{safe_str(ref.get('address'))}</td></tr>
-                        <tr><td class="detail-label">Designation</td><td class="detail-value">{safe_str(ref.get('relationship'))}</td></tr>
-                        <tr><td class="detail-label">Contact</td><td class="detail-value">{safe_str(ref.get('ref_contact_number'))}</td></tr>
-                        <tr><td class="detail-label">Email</td><td class="detail-value">{safe_str(ref.get('ref_email_id'))}</td></tr>
-                    </table>
-                </div>
-                """
-    else:
-        reference_html = "<p>No reference details provided.</p>"
-
-    # Verification Checks
-    checks = form.verification_checks or {}
-
-    html_content = f"""
-    <html>
-    <head>
-        <style>
-            body {{ font-family: 'Helvetica', sans-serif; margin: 0; padding: 25px; font-size: 10px; color: #333; }}
-            .header {{ text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #4A90E2; }}
-            .header h1 {{ color: #4A90E2; margin: 0; font-size: 20px; font-weight: bold; }}
-            .section {{ margin-bottom: 15px; page-break-inside: avoid; }}
-            .section-title {{ background-color: #4A90E2; color: #fff; font-size: 12px; font-weight: bold; padding: 6px 12px; text-transform: uppercase; }}
-            .section-subtitle {{ font-size: 11px; font-weight: bold; color: #555; margin-top: 10px; margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 3px; }}
-            .form-table {{ width: 100%; border-collapse: collapse; }}
-            .form-table td {{ border: 1px solid #eee; padding: 6px 8px; vertical-align: top; }}
-            .form-label {{ font-weight: bold; color: #444; background-color: #f8f8f8; width: 25%; white-space: nowrap; }}
-            .page-break {{ page-break-before: always; }}
-            .entry-card {{ border: 1px solid #ddd; border-radius: 4px; margin-bottom: 10px; overflow: hidden; }}
-            
-            .detail-table {{ width: 100%; border-collapse: collapse; table-layout: auto; }}
-            .detail-table td {{ border: 1px solid #eee; padding: 6px 8px; }}
-            .detail-label {{ width: 30%; font-weight: bold; background-color: #f8f8f8; white-space: nowrap; }}
-            .detail-value {{ width: 70%; word-wrap: break-word; }}
-            
-            .auth-section {{ border: 2px solid #4A90E2; padding: 15px; background-color: #f9fcff; border-radius: 10px; }}
-            .verification-table {{ width: 100%; border: none !important; margin-bottom: 10px; }}
-            .verification-table td {{ border: none !important; padding: 4px 0; vertical-align: middle; }}
-            .verification-table .text-cell {{ width: 95%; text-align: left; }}
-            .verification-table .box-cell {{ width: 5%; text-align: right; }}
-            .checkbox {{ display: inline-block; width: 14px; height: 14px; border: 1px solid #333; }}
-            .acknowledgment-row {{ display: -pdf-flexbox; flex-direction: row; align-items: center; margin-top: 10px; }}
-            .ack-checkbox {{ display: inline-block; width: 12px; height: 12px; border: 1px solid #333; text-align: center; line-height: 12px; font-family: sans-serif; }}
-            .ack-label {{ margin-left: 8px; }}
-
-        </style>
-    </head>
-    <body>
-        <div class="header"><h1>BACKGROUND CHECK FORM</h1></div>
-
-        <div class="section">
-            <div class="section-title">PERSONAL INFORMATION</div>
-            <table class="form-table">
-                 <tr>
-                    <td class="form-label">Candidate Name</td><td>{to_title_case(safe_str(form.candidate_name))}</td>
-                    <td class="form-label">Father's Name</td><td>{to_title_case(safe_str(form.father_name))}</td>
-                </tr>
-                <tr>
-                    <td class="form-label">Date of Birth</td><td>{format_date(form.date_of_birth)}</td>
-                    <td class="form-label">Mother's Name</td><td>{to_title_case(safe_str(form.mother_name))}</td>
-                </tr>
-                <tr>
-                    <td class="form-label">Marital Status</td><td>{safe_str(form.marital_status)}</td>
-                    <td class="form-label">Email ID</td><td>{safe_str(form.email_id)}</td>
-                </tr>
-                <tr>
-                    <td class="form-label">Contact Number</td><td>{safe_str(form.contact_number)}</td>
-                    <td class="form-label">Alternate Contact</td><td>{safe_str(form.alternate_contact_number)}</td>
-                </tr>
-                <tr>
-                    <td class="form-label">Aadhaar Number</td><td>{safe_str(form.aadhaar_card_number)}</td>
-                    <td class="form-label">PAN Number</td><td>{safe_str(form.pan_number).upper()}</td>
-                </tr>
-                 <tr>
-                    <td class="form-label">UAN Number</td><td colspan="3">{safe_str(form.uan_number)}</td>
-                </tr>
-            </table>
-        </div>
-        <div class="section">
-            <div class="section-title">ADDRESS DETAILS</div>
-            <div class="section-subtitle">Current Address</div>
-            <table class="form-table">
-                <tr><td class="form-label">Complete Address</td><td colspan="3">{safe_str(form.current_complete_address)}</td></tr>
-                <tr>
-                    <td class="form-label">Landmark</td><td>{safe_str(form.current_landmark)}</td>
-                    <td class="form-label">City</td><td>{safe_str(form.current_city)}</td>
-                </tr>
-                <tr>
-                    <td class="form-label">State</td><td>{safe_str(form.current_state)}</td>
-                    <td class="form-label">PIN Code</td><td>{safe_str(form.current_pin_code)}</td>
-                </tr>
-                <tr>
-                    <td class="form-label">Police Station</td><td>{safe_str(form.current_police_station)}</td>
-                    <td class="form-label">Duration</td><td>{format_date(form.current_duration_from)} to {format_date(form.current_duration_to)}</td>
-                </tr>
-            </table>
-            <div class="section-subtitle">Permanent Address</div>
-            <table class="form-table">
-                <tr><td class="form-label">Complete Address</td><td colspan="3">{safe_str(form.permanent_complete_address)}</td></tr>
-                <tr>
-                    <td class="form-label">Landmark</td><td>{safe_str(form.permanent_landmark)}</td>
-                    <td class="form-label">City</td><td>{safe_str(form.permanent_city)}</td>
-                </tr>
-                <tr>
-                    <td class="form-label">State</td><td>{safe_str(form.permanent_state)}</td>
-                    <td class="form-label">PIN Code</td><td>{safe_str(form.permanent_pin_code)}</td>
-                </tr>
-                 <tr>
-                    <td class="form-label">Police Station</td><td>{safe_str(form.permanent_police_station)}</td>
-                    <td class="form-label">Duration</td><td>{format_date(form.permanent_duration_from)} to {format_date(form.permanent_duration_to)}</td>
-                </tr>
-            </table>
-        </div>
-
-        <div class="page-break"></div>
-
-        <div class="section">
-            <div class="section-title">EDUCATIONAL QUALIFICATIONS</div>
-            {education_html}
-        </div>
-        <div class="section">
-            <div class="section-title">EMPLOYMENT DETAILS</div>
-            <div class="section-subtitle">Previous Organization Details</div>
-            <table class="form-table">
-                <tr><td class="form-label">Organization Name</td><td colspan="3">{safe_str(form.organization_name)}</td></tr>
-                <tr><td class="form-label">Organization Address</td><td colspan="3">{safe_str(form.organization_address)}</td></tr>
-                <tr>
-                    <td class="form-label">Designation</td><td>{safe_str(form.designation)}</td>
-                    <td class="form-label">Employee Code</td><td>{safe_str(form.employee_code)}</td>
-                </tr>
-                <tr>
-                    <td class="form-label">Date of Joining</td><td>{format_date(form.date_of_joining)}</td>
-                    <td class="form-label">Last Working Day</td><td>{format_date(form.last_working_day)}</td>
-                </tr>
-                 <tr>
-                    <td class="form-label">Salary (CTC)</td><td>{safe_str(form.salary)}</td>
-                    <td class="form-label">Reason for Leaving</td><td>{safe_str(form.reason_for_leaving)}</td>
-                </tr>
-            </table>
-            <div class="section-subtitle">Reporting Manager Details</div>
-            <table class="form-table">
-                <tr>
-                    <td class="form-label">Manager Name</td><td>{safe_str(form.manager_name)}</td>
-                    <td class="form-label">Manager Contact</td><td>{safe_str(form.manager_contact_number)}</td>
-                </tr>
-                <tr><td class="form-label">Manager Email</td><td colspan="3">{safe_str(form.manager_email_id)}</td></tr>
-            </table>
-        </div>
-
-        <div class="page-break"></div>
-
-        <div class="section">
-            <div class="section-title">HR DETAILS</div>
-            {hr_html}
-        </div>
-        <div class="section">
-            <div class="section-title">PROFESSIONAL REFERENCES</div>
-            {reference_html}
-        </div>
+        # Query users whose date_of_birth field is not null
+        users_with_dob = db.query(BackgroundCheckForm).filter(
+            BackgroundCheckForm.date_of_birth.isnot(None)
+        ).all()
         
-        <div class="page-break"></div>
-        
-        <div class="section">
-            <div class="section-title">AUTHORIZATION & VERIFICATION CHECKS</div>
-            <div class="auth-section">
-                <p style="font-weight: bold;">Required Background Verification Checks:</p>
-                <table class="verification-table">
-                    <tr>
-                        <td class="text-cell">Education Verification</td>
-                        <td class="box-cell"><div class="checkbox">{get_check_char(checks.get('education_verification'))}</div></td>
-                    </tr>
-                    <tr>
-                        <td class="text-cell">Employment Verification</td>
-                        <td class="box-cell"><div class="checkbox">{get_check_char(checks.get('employment_verification'))}</div></td>
-                    </tr>
-                    <tr>
-                        <td class="text-cell">Address & Criminal Verification</td>
-                        <td class="box-cell"><div class="checkbox">{get_check_char(checks.get('address_verification'))}</div></td>
-                    </tr>
-                    <tr>
-                        <td class="text-cell">Identity Verification</td>
-                        <td class="box-cell"><div class="checkbox">{get_check_char(checks.get('identity_verification'))}</div></td>
-                    </tr>
-                    <tr>
-                        <td class="text-cell">CIBIL Verification</td>
-                        <td class="box-cell"><div class="checkbox">{get_check_char(checks.get('credit_check'))}</div></td>
-                    </tr>
-                </table>
+        # Filter for today's birthdays
+        todays_birthdays = []
+        for user in users_with_dob:
+            if user.date_of_birth:
+                birth_date = user.date_of_birth
+                # Handle different date formats - could be string or datetime
+                if isinstance(birth_date, str):
+                    try:
+                        birth_date = datetime.strptime(birth_date, '%Y-%m-%d').date()
+                    except ValueError:
+                        # Try alternative date format if the first one fails
+                        try:
+                            birth_date = datetime.strptime(birth_date, '%d-%m-%Y').date()
+                        except ValueError:
+                            # Skip this record if date format is invalid
+                            continue
+                elif isinstance(birth_date, datetime):
+                    birth_date = birth_date.date()
                 
-                <div class="section-title" style="margin-top: 20px; text-transform: none; text-align: left;">Letter of Authorization</div>
-                <p style="font-size: 8pt; text-align: justify; margin-top: 10px;">I hereby authorize (company name) and/or any of its subsidiaries or affiliates, and any person or organizations acting on its behalf to verify the information presented on this application form and to procure and investigate report for background verification purpose. I have read, understood and by my signature consent to above statement. I also understood if any misrepresentation found in details provided by me it may cause the repercussions, which may be lead to result as releasing from my duties with immediate effect.</p>
-                <table class="form-table" style="margin-top: 15px;">
-                    <tr><td class="form-label">NAME OF THE CANDIDATE (FOR AUTHORIZATION)</td><td>{to_title_case(safe_str(form.candidate_name_auth))}</td></tr>
-                    <tr><td class="form-label">SIGNATURE (TYPE YOUR FULL NAME)</td><td>{to_title_case(safe_str(form.signature))}</td></tr>
-                    <tr><td class="form-label">DATE</td><td>{format_date(form.auth_date)}</td></tr>
-                </table>
-                <div class="acknowledgment-row">
-                    <span class="ack-checkbox">{get_check_char(form.acknowledgment)}</span><span class="ack-label">I acknowledge that all the information provided above is true and correct to the best of my knowledge.</span>
-                </div>
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-    
-    result = BytesIO()
-    pdf = pisa.CreatePDF(BytesIO(html_content.encode("UTF-8")), dest=result)
-
-    if pdf.err:
-        raise HTTPException(status_code=500, detail=f"Error generating PDF. Error code: {pdf.err}")
-
-    result.seek(0)
-    return StreamingResponse(
-        result,
-        media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=background_check_{form_id}.pdf"}
-    )
+                # Check if today is the birthday
+                if birth_date.month == today_month and birth_date.day == today_day:
+                    todays_birthdays.append({
+                        "id": user.id,
+                        "candidate_name": user.candidate_name,
+                        "email_id": user.email_id,
+                        "date_of_birth": birth_date.isoformat(),
+                        "age": today.year - birth_date.year
+                    })
+        
+        return {
+            "date": today.strftime('%Y-%m-%d'),
+            "total_birthdays": len(todays_birthdays),
+            "birthday_users": todays_birthdays
+        }
+        
+    except Exception as e:
+        # Use a simple print for logging if logger is not properly imported
+        print(f"Error fetching today's birthdays: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve birthday data: {str(e)}"
+        )
