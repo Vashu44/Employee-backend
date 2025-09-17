@@ -73,12 +73,25 @@ app.mount("/static", StaticFiles(directory="./static"), name="static")
 app.include_router(find_weather, tags=["Weather"])
 app.mount("/admin", admin_panel)
 
+# Robust CORS configuration: support comma-separated origins in env, fallback to '*' in dev
+_allowed_origins = []
+if REACT_APP_API_URL:
+    # allow comma-separated list of origins in env
+    _allowed_origins = [o.strip() for o in REACT_APP_API_URL.split(',') if o.strip()]
+if not _allowed_origins:
+    # no origin configured -> allow all origins (development convenience)
+    _allowed_origins = ["*"]
+
+# If we allow all origins, we should not set allow_credentials=True (browsers reject wildcard with credentials)
+_allow_credentials = False if _allowed_origins == ["*"] else True
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[REACT_APP_API_URL],
-    allow_credentials=True,
+    allow_origins=_allowed_origins,
+    allow_credentials=_allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["set-cookie"],
 )
 
 Base.metadata.create_all(bind=engine)

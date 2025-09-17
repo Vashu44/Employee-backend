@@ -2,6 +2,7 @@ import logging
 import os
 from dotenv import load_dotenv
 import redis # type: ignore
+
 # Load environment variables
 load_dotenv()
 
@@ -10,21 +11,28 @@ logger = logging.getLogger(__name__)
 class RedisClient:
     def __init__(self):
         try:
-            self.client = redis.Redis(
-                host=os.getenv("REDIS_HOST", "localhost"), 
-                port=int(os.getenv("REDIS_PORT", 6379)), 
-                db=int(os.getenv("REDIS_DB", 0)), 
+            # ### YAHAN BADLAAV KIYA GAYA HAI ###
+            # Puraana code host, port, etc. alag-alag dhoondh raha tha.
+            # Naya code seedhe REDIS_URL ko istemaal karega.
+            
+            redis_url = os.getenv("REDIS_URL")
+            if not redis_url:
+                raise ValueError("REDIS_URL environment variable not set.")
+
+            self.client = redis.from_url(
+                redis_url,
                 decode_responses=True,
                 socket_connect_timeout=5,
                 socket_timeout=5,
                 retry_on_timeout=True
             )
+            
             # Test the connection
             self.client.ping()
             logger.info("Redis connection established successfully")
-        except redis.ConnectionError as e:
+        except (redis.ConnectionError, ValueError) as e:
             logger.error(f"Failed to connect to Redis: {str(e)}")
-            raise Exception("Redis connection failed. Make sure Redis server is running.")
+            raise Exception("Redis connection failed. Make sure Redis server is running and REDIS_URL is set.")
         except Exception as e:
             logger.error(f"Unexpected error connecting to Redis: {str(e)}")
             raise
@@ -67,6 +75,7 @@ class RedisClient:
         except Exception as e:
             logger.error(f"Unexpected error deleting key {key}: {str(e)}")
             raise
+            
     def exists(self, key):
         """Check if key exists in Redis"""
         try:
