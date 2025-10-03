@@ -1512,8 +1512,9 @@ async def get_user_expense_profile(user_email: str, db: Session = Depends(get_db
             },
             "expense_summary": {
                 "total_claims": len(claims),
-                "total_amount": sum(float(claim.total_amount) for claim in claims),
-                "approved_amount": sum(float(claim.approved_amount) for claim in claims),
+                # guard against None values on amount fields
+                "total_amount": sum(float(claim.total_amount or 0) for claim in claims),
+                "approved_amount": sum(float(claim.approved_amount or 0) for claim in claims),
                 "pending_claims": len([c for c in claims if c.status == "pending"]),
                 "draft_claims": len([c for c in claims if c.status == "draft"])
             },
