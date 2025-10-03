@@ -15,11 +15,11 @@ router = APIRouter(prefix="/users")
 @router.get("/basic")
 async def get_all_users_basic(db: Session = Depends(get_db)):
     """
-    Get all users with only basic info (user_id and username)
+    Get all users with basic info and details
     """
     try:
-        # Query all users with their details
-        users = db.query(usermodels.User).join(
+        # Query all users with their details using outerjoin to include users without UserDetails
+        users = db.query(usermodels.User).outerjoin(
             UserDetails, usermodels.User.id == UserDetails.user_id
         ).all()
         
@@ -29,12 +29,18 @@ async def get_all_users_basic(db: Session = Depends(get_db)):
                 detail="No users found"
             )
         
-        # Prepare minimal response data
+        # Prepare response data with more details
         users_list = []
         for user in users:
             user_info = {
                 "user_id": user.id,
                 "username": user.username,
+                "email": user.email,
+                "role": user.role,
+                "is_active": user.is_active if hasattr(user, 'is_active') and user.is_active is not None else True,
+                "is_verified": user.is_verified if hasattr(user, 'is_verified') and user.is_verified is not None else False,
+                "created_at": user.created_at.isoformat() if hasattr(user, 'created_at') and user.created_at else None,
+                "updated_at": user.updated_at.isoformat() if hasattr(user, 'updated_at') and user.updated_at else None,
             }
             users_list.append(user_info)
         

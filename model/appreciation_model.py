@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Date, DateTime, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from db.database import Base 
@@ -12,7 +12,7 @@ class Appreciation(Base):
     award_type = Column(String(100), nullable=False)
     badge_level = Column(String(20), nullable=False)
     appreciation_message = Column(Text, nullable=True)
-    month = Column(String(20), nullable=False)  # Increased length to store month names
+    month = Column(String(20), nullable=False) 
     year = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -30,10 +30,11 @@ class Like(Base):
     __tablename__ = "appreciation_likes"
     id = Column(Integer, primary_key=True, index=True)
     appreciation_id = Column(Integer, ForeignKey("appreciations.id"), nullable=False)
-    likes_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(Date,server_default=func.now())
     
     appreciation = relationship("Appreciation", back_populates="likes")
-    user = relationship("User", foreign_keys=[likes_id])
+    user = relationship("User", foreign_keys=[user_id])
 
 class Comment(Base):
     __tablename__ = "appreciation_comments"

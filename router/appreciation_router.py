@@ -6,7 +6,7 @@ from model.appreciation_model import Appreciation, Like, Comment
 from Schema.appreciation_schema import (
     AppreciationCreate, AppreciationUpdate, AppreciationResponse,
     EmployeeAppreciationSummary, DashboardAppreciation, MonthlyHighlightResponse,
-    CommentCreate, CommentResponse, LikeResponse
+    CommentCreate, CommentResponse
 )
 from pydantic import BaseModel 
 import model.usermodels as usermodels
@@ -208,14 +208,14 @@ async def get_appreciation_summary(
 ):
     """Get appreciation summary for all employees"""
 
-@router.get("/", response_model=List[AppreciationResponse])
+@router.get("/", response_model=List[dict])
 async def get_all_appreciations(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
     active_only: bool = Query(True),
     db: Session = Depends(get_db)
 ):
-    """Get all appreciations with pagination"""
+    """Get all appreciations with pagination and engagement metrics"""
     try:
         query = db.query(Appreciation)
         
@@ -235,7 +235,12 @@ async def get_all_appreciations(
             employee_email = employee.email if employee else ''
             given_by_username = giver.username if giver else 'Unknown Giver'
 
-            response_list.append(AppreciationResponse(
+            # Get engagement metrics
+            likes_count = db.query(Like).filter(Like.appreciation_id == app.id).count()
+            comments_count = db.query(Comment).filter(Comment.appreciation_id == app.id).count()
+            
+            # Create base response
+            appreciation_response = AppreciationResponse(
                 id=app.id,
                 employee_id=app.employee_id,
                 employee_username=employee_username,
@@ -249,7 +254,14 @@ async def get_all_appreciations(
                 year=app.year,
                 is_active=app.is_active,
                 created_at=app.created_at
-            ))
+            )
+            
+            # Convert to dict and add engagement counts
+            appreciation_dict = appreciation_response.dict()
+            appreciation_dict["likes_count"] = likes_count
+            appreciation_dict["comments_count"] = comments_count
+            
+            response_list.append(appreciation_dict)
 
         return response_list
 
@@ -357,20 +369,61 @@ async def get_dashboard_appreciations(
             detail=f"Failed to fetch dashboard appreciations: {str(e)}"
         )
 
-@router.get("/{employee_id}", response_model=List[AppreciationResponse])
+@router.get("/{employee_id}", response_model=List[dict])
 async def get_employee_appreciations(
     employee_id: int,
     active_only: bool = Query(True),
+    badge_level: Optional[str] = Query(None, description="Filter by badge level (gold, silver, bronze)"),
+    year: Optional[int] = Query(None, description="Filter by year"),
+    month: Optional[str] = Query(None, description="Filter by month"),
+    award_type: Optional[str] = Query(None, description="Filter by award type"),
+    page: Optional[int] = Query(1, description="Page number"),
     db: Session = Depends(get_db)
 ):
-    """Get all appreciations for a specific employee"""
+    """Get all appreciations for a specific employee with optional filters"""
     try:
         query = db.query(Appreciation).filter(Appreciation.employee_id == employee_id)
 
         if active_only:
             query = query.filter(Appreciation.is_active == True)
 
+        # Add filters
+        if badge_level:
+            query = query.filter(Appreciation.badge_level == badge_level.lower())
+        
+        if year:
+            query = query.filter(Appreciation.year == year)
+            
+        if month:
+            query = query.filter(Appreciation.month == month)
+            
+        if award_type:
+            query = query.filter(Appreciation.award_type.ilike(f"%{award_type}%"))
+
         appreciations = query.order_by(desc(Appreciation.created_at)).all()
+
+        logger.info(f"🔍 Filtering appreciations for employee {employee_id}: badge_level={badge_level}, year={year}, month={month}, award_type={award_type}")
+        logger.info(f"📊 Found {len(appreciations)} appreciations after filtering")
+        if active_only:
+            query = query.filter(Appreciation.is_active == True)
+
+        # Add filters
+        if badge_level:
+            query = query.filter(Appreciation.badge_level == badge_level.lower())
+        
+        if year:
+            query = query.filter(Appreciation.year == year)
+            
+        if month:
+            query = query.filter(Appreciation.month == month)
+            
+        if award_type:
+            query = query.filter(Appreciation.award_type.ilike(f"%{award_type}%"))
+
+        appreciations = query.order_by(desc(Appreciation.created_at)).all()
+
+        logger.info(f"🔍 Filtering appreciations for employee {employee_id}: badge_level={badge_level}, year={year}, month={month}, award_type={award_type}")
+        logger.info(f"📊 Found {len(appreciations)} appreciations after filtering")
 
         response_list = []
         for app in appreciations:
@@ -380,8 +433,13 @@ async def get_employee_appreciations(
             employee_username = employee.username if employee else 'Unknown Employee'
             employee_email = employee.email if employee else ''
             given_by_username = giver.username if giver else 'Unknown Giver'
-
-            response_list.append(AppreciationResponse(
+            
+            # Get likes and comments counts for this appreciation
+            likes_count = db.query(Like).filter(Like.appreciation_id == app.id).count()
+            comments_count = db.query(Comment).filter(Comment.appreciation_id == app.id).count()
+            
+            # Create base response
+            appreciation_response = AppreciationResponse(
                 id=app.id,
                 employee_id=app.employee_id,
                 employee_username=employee_username,
@@ -395,7 +453,14 @@ async def get_employee_appreciations(
                 year=app.year,
                 is_active=app.is_active,
                 created_at=app.created_at
-            ))
+            )
+            
+            # Convert to dict and add engagement counts
+            appreciation_dict = appreciation_response.dict()
+            appreciation_dict["likes_count"] = likes_count
+            appreciation_dict["comments_count"] = comments_count
+            
+            response_list.append(appreciation_dict)
 
         return response_list
 
@@ -556,12 +621,12 @@ async def get_monthly_highlight_legacy(db: Session = Depends(get_db)):
     return await get_monthly_highlight(db)
 
 # DYNAMIC PATH: This path with a variable comes AFTER the specific ones
-@router.get("/{appreciation_id}", response_model=AppreciationResponse)
+@router.get("/{appreciation_id}", response_model=dict)
 async def get_appreciation_by_id(
     appreciation_id: int,
     db: Session = Depends(get_db)
 ):
-    """Get a specific appreciation by ID"""
+    """Get a specific appreciation by ID with engagement metrics"""
     try:
         appreciation = db.query(Appreciation).filter(Appreciation.id == appreciation_id).first()
 
@@ -577,8 +642,13 @@ async def get_appreciation_by_id(
         employee_username = employee.username if employee else 'Unknown Employee'
         employee_email = employee.email if employee else ''
         given_by_username = giver.username if giver else 'Unknown Giver'
+        
+        # Get engagement metrics
+        likes_count = db.query(Like).filter(Like.appreciation_id == appreciation.id).count()
+        comments_count = db.query(Comment).filter(Comment.appreciation_id == appreciation.id).count()
 
-        return AppreciationResponse(
+        # Create base response
+        appreciation_response = AppreciationResponse(
             id=appreciation.id,
             employee_id=appreciation.employee_id,
             employee_username=employee_username,
@@ -593,6 +663,13 @@ async def get_appreciation_by_id(
             is_active=appreciation.is_active,
             created_at=appreciation.created_at
         )
+        
+        # Convert to dict and add engagement counts
+        result = appreciation_response.dict()
+        result["likes_count"] = likes_count
+        result["comments_count"] = comments_count
+        
+        return result
 
     except HTTPException:
         raise
@@ -698,104 +775,356 @@ async def delete_appreciation(
         )
     
 # --- START OF MODIFIED ENDPOINTS ---
-
 @router.post("/{appreciation_id}/like", status_code=status.HTTP_200_OK)
 async def toggle_like_appreciation(
     appreciation_id: int,
-    action: UserAction, # CHANGED: Added UserAction to get user_id from body
+    action: UserAction,
     db: Session = Depends(get_db)
-    # REMOVED: current_user dependency
 ):
-    appreciation = db.query(Appreciation).filter(Appreciation.id == appreciation_id).first()
-    if not appreciation:
-        raise HTTPException(status_code=404, detail="Appreciation not found")
-    
-    # Verify the user exists
-    user = db.query(usermodels.User).filter(usermodels.User.id == action.user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    """Toggle like on an appreciation (like Instagram) - SIMPLE DEBUG VERSION"""
+    try:
+        print("=== SIMPLE DEBUG INFO ===")
+        print(f"Appreciation ID: {appreciation_id}")
+        print(f"User ID: {action.user_id}")
+        
+        # Verify appreciation exists
+        appreciation = db.query(Appreciation).filter(Appreciation.id == appreciation_id).first()
+        if not appreciation:
+            raise HTTPException(status_code=404, detail="Appreciation not found")
+        print(f"Appreciation found: {appreciation.id}")
+        
+        # Verify user exists
+        user = db.query(usermodels.User).filter(usermodels.User.id == action.user_id).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        print(f"User found: {user.username}")
 
-    like = db.query(Like).filter(
-        Like.appreciation_id == appreciation_id,
-        Like.user_id == action.user_id # CHANGED: Use user_id from request body
-    ).first()
+        # Try to create a Like instance to test the model
+        try:
+            test_like = Like(appreciation_id=appreciation_id, user_id=action.user_id)
+            print("SUCCESS: Like model accepts user_id")
+            field_name = "user_id"
+        except Exception as e1:
+            print(f"user_id failed: {e1}")
+            try:
+                test_like = Like(appreciation_id=appreciation_id, likes_id=action.user_id)
+                print("SUCCESS: Like model accepts likes_id")
+                field_name = "likes_id"
+            except Exception as e2:
+                print(f"likes_id also failed: {e2}")
+                # Let's see what fields the Like model actually accepts
+                print(f"Like model __init__ signature issue")
+                raise HTTPException(
+                    status_code=500, 
+                    detail=f"Like model field issue - user_id: {e1}, likes_id: {e2}"
+                )
 
-    if like:
-        db.delete(like)
-        db.commit()
-        return {"message": "Like removed"}
-    else:
-        new_like = Like(appreciation_id=appreciation_id, user_id=action.user_id) # CHANGED
-        db.add(new_like)
-        db.commit()
-        return {"message": "Like added"}
+        # Check if user already liked this appreciation
+        if field_name == "user_id":
+            existing_like = db.query(Like).filter(
+                Like.appreciation_id == appreciation_id,
+                Like.user_id == action.user_id
+            ).first()
+        else:
+            existing_like = db.query(Like).filter(
+                Like.appreciation_id == appreciation_id,
+                Like.likes_id == action.user_id
+            ).first()
+        
+        print(f"Existing like found: {existing_like is not None}")
 
-@router.get("/{appreciation_id}/likes", response_model=LikeResponse)
+        if existing_like:
+            # Unlike - remove the like
+            db.delete(existing_like)
+            db.commit()
+            print("Like removed")
+            
+            # Get updated like count
+            total_likes = db.query(Like).filter(Like.appreciation_id == appreciation_id).count()
+            
+            return {
+                "message": "Like removed successfully",
+                "is_liked": False,
+                "total_likes": total_likes,
+                "user_id": action.user_id,
+                "username": user.username,
+                "debug_field_used": field_name
+            }
+        else:
+            # Like - add new like
+            if field_name == "user_id":
+                new_like = Like(appreciation_id=appreciation_id, user_id=action.user_id)
+            else:
+                new_like = Like(appreciation_id=appreciation_id, likes_id=action.user_id)
+            
+            db.add(new_like)
+            db.commit()
+            print("Like added")
+            
+            # Get updated like count
+            total_likes = db.query(Like).filter(Like.appreciation_id == appreciation_id).count()
+            
+            return {
+                "message": "Like added successfully",
+                "is_liked": True,
+                "total_likes": total_likes,
+                "user_id": action.user_id,
+                "username": user.username,
+                "debug_field_used": field_name
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error toggling like: {str(e)}")
+        print(f"Full error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to toggle like: {str(e)}"
+        )
+@router.get("/{appreciation_id}/likes", response_model=dict)
 async def get_appreciation_likes(
     appreciation_id: int,
-    user_id: int, # CHANGED: Added user_id as a required query parameter
+    user_id: Optional[int] = Query(None, description="User ID to check if they liked this appreciation"),
     db: Session = Depends(get_db)
-    # REMOVED: current_user dependency
 ):
-    total_likes = db.query(Like).filter(Like.appreciation_id == appreciation_id).count()
-    user_like = db.query(Like).filter(
-        Like.appreciation_id == appreciation_id,
-        Like.user_id == user_id # CHANGED: Use user_id from query parameter
-    ).first()
-    
-    return {
-        "total_likes": total_likes,
-        "is_liked_by_user": user_like is not None
-    }
+    """Get all likes for an appreciation with user details"""
+    try:
+        # Verify appreciation exists
+        appreciation = db.query(Appreciation).filter(Appreciation.id == appreciation_id).first()
+        if not appreciation:
+            raise HTTPException(status_code=404, detail="Appreciation not found")
+        
+        # Get all likes with user details
+        likes_query = db.query(Like).filter(Like.appreciation_id == appreciation_id).all()
+        
+        total_likes = len(likes_query)
+        liked_users = []
+        
+        for like in likes_query:
+            user = db.query(usermodels.User).filter(usermodels.User.id == like.user_id).first()
+            if user:
+                liked_users.append({
+                    "user_id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "liked_at": getattr(like, 'created_at', None)
+                })
+        
+        # Check if specific user liked this appreciation
+        is_liked_by_user = False
+        if user_id:
+            user_like = db.query(Like).filter(
+                Like.appreciation_id == appreciation_id,
+                Like.user_id == user_id
+            ).first()
+            is_liked_by_user = user_like is not None
+        
+        return {
+            "appreciation_id": appreciation_id,
+            "total_likes": total_likes,
+            "is_liked_by_user": is_liked_by_user,
+            "liked_users": liked_users
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching likes: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch likes: {str(e)}"
+        )
 
 @router.post("/{appreciation_id}/comments", response_model=CommentResponse, status_code=status.HTTP_201_CREATED)
 async def create_comment(
     appreciation_id: int,
-    comment: CommentCreate, # IMPORTANT: You must add `user_id: int` to your CommentCreate schema
+    comment: CommentCreate,
     db: Session = Depends(get_db)
-    # REMOVED: current_user dependency
 ):
-    appreciation = db.query(Appreciation).filter(Appreciation.id == appreciation_id).first()
-    if not appreciation:
-        raise HTTPException(status_code=404, detail="Appreciation not found")
+    """Add a comment to an appreciation (like Instagram)"""
+    try:
+        # Verify appreciation exists
+        appreciation = db.query(Appreciation).filter(Appreciation.id == appreciation_id).first()
+        if not appreciation:
+            raise HTTPException(status_code=404, detail="Appreciation not found")
 
-    # Verify the user who is commenting exists
-    commenting_user = db.query(usermodels.User).filter(usermodels.User.id == comment.user_id).first()
-    if not commenting_user:
-        raise HTTPException(status_code=404, detail="Commenting user not found")
+        # Verify user exists
+        commenting_user = db.query(usermodels.User).filter(usermodels.User.id == comment.user_id).first()
+        if not commenting_user:
+            raise HTTPException(status_code=404, detail="User not found")
 
-    new_comment = Comment(
-        appreciation_id=appreciation_id,
-        user_id=comment.user_id, # CHANGED: Use user_id from request body
-        text=comment.text
-    )
-    db.add(new_comment)
-    db.commit()
-    db.refresh(new_comment)
-    
-    return CommentResponse(
-        id=new_comment.id,
-        user_id=new_comment.user_id,
-        username=commenting_user.username, # CHANGED: Get username from the user we looked up
-        text=new_comment.text,
-        created_at=new_comment.created_at
-    )
+        # Create new comment
+        new_comment = Comment(
+            appreciation_id=appreciation_id,
+            user_id=comment.user_id,
+            text=comment.text
+        )
+        db.add(new_comment)
+        db.commit()
+        db.refresh(new_comment)
+        
+        return CommentResponse(
+            id=new_comment.id,
+            user_id=new_comment.user_id,
+            username=commenting_user.username,
+            text=new_comment.text,
+            created_at=new_comment.created_at
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error creating comment: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create comment: {str(e)}"
+        )
 
 @router.get("/{appreciation_id}/comments", response_model=List[CommentResponse])
 async def get_appreciation_comments(
     appreciation_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
-    comments = db.query(Comment).filter(Comment.appreciation_id == appreciation_id).order_by(desc(Comment.created_at)).all()
-    
-    response = []
-    for comment in comments:
-        user = db.query(usermodels.User).filter(usermodels.User.id == comment.user_id).first()
-        response.append(CommentResponse(
-            id=comment.id,
-            user_id=comment.user_id,
-            username=user.username if user else "Unknown",
-            text=comment.text,
-            created_at=comment.created_at
-        ))
-    return response
+    """Get all comments for an appreciation with user details"""
+    try:
+        # Verify appreciation exists
+        appreciation = db.query(Appreciation).filter(Appreciation.id == appreciation_id).first()
+        if not appreciation:
+            raise HTTPException(status_code=404, detail="Appreciation not found")
+        
+        # Get comments with pagination, ordered by newest first
+        comments = db.query(Comment)\
+            .filter(Comment.appreciation_id == appreciation_id)\
+            .order_by(desc(Comment.created_at))\
+            .offset(skip)\
+            .limit(limit)\
+            .all()
+        
+        response = []
+        for comment in comments:
+            user = db.query(usermodels.User).filter(usermodels.User.id == comment.user_id).first()
+            response.append(CommentResponse(
+                id=comment.id,
+                user_id=comment.user_id,
+                username=user.username if user else "Unknown User",
+                text=comment.text,
+                created_at=comment.created_at
+            ))
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching comments: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch comments: {str(e)}"
+        )
+
+@router.delete("/comments/{comment_id}")
+async def delete_comment(
+    comment_id: int,
+    user_id: int = Query(..., description="User ID who wants to delete the comment"),
+    db: Session = Depends(get_db)
+):
+    """Delete a comment (user can only delete their own comments)"""
+    try:
+        comment = db.query(Comment).filter(Comment.id == comment_id).first()
+        if not comment:
+            raise HTTPException(status_code=404, detail="Comment not found")
+        
+        # Check if user is the author of the comment
+        if comment.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can only delete your own comments"
+            )
+        
+        db.delete(comment)
+        db.commit()
+        
+        return {"message": "Comment deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting comment: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete comment: {str(e)}"
+        )
+
+@router.get("/{appreciation_id}/engagement", response_model=dict)
+async def get_appreciation_engagement(
+    appreciation_id: int,
+    user_id: Optional[int] = Query(None, description="User ID to check their engagement"),
+    db: Session = Depends(get_db)
+):
+    """Get complete engagement data for an appreciation (likes + comments)"""
+    try:
+        # Verify appreciation exists
+        appreciation = db.query(Appreciation).filter(Appreciation.id == appreciation_id).first()
+        if not appreciation:
+            raise HTTPException(status_code=404, detail="Appreciation not found")
+        
+        # Get like count and user's like status
+        total_likes = db.query(Like).filter(Like.appreciation_id == appreciation_id).count()
+        is_liked_by_user = False
+        
+        if user_id:
+            user_like = db.query(Like).filter(
+                Like.appreciation_id == appreciation_id,
+                Like.user_id == user_id
+            ).first()
+            is_liked_by_user = user_like is not None
+        
+        # Get comment count
+        total_comments = db.query(Comment).filter(Comment.appreciation_id == appreciation_id).count()
+        
+        # Get recent comments (last 3)
+        recent_comments = db.query(Comment)\
+            .filter(Comment.appreciation_id == appreciation_id)\
+            .order_by(desc(Comment.created_at))\
+            .limit(3)\
+            .all()
+        
+        recent_comments_data = []
+        for comment in recent_comments:
+            user = db.query(usermodels.User).filter(usermodels.User.id == comment.user_id).first()
+            recent_comments_data.append({
+                "id": comment.id,
+                "user_id": comment.user_id,
+                "username": user.username if user else "Unknown User",
+                "text": comment.text,
+                "created_at": comment.created_at
+            })
+        
+        return {
+            "appreciation_id": appreciation_id,
+            "engagement": {
+                "likes": {
+                    "total": total_likes,
+                    "is_liked_by_user": is_liked_by_user
+                },
+                "comments": {
+                    "total": total_comments,
+                    "recent": recent_comments_data
+                }
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error fetching engagement data: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch engagement data: {str(e)}"
+        )

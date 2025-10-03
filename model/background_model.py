@@ -34,7 +34,7 @@ class BackgroundCheckForm(Base):
 
     # Permanent Address
     permanent_complete_address = Column(Text)  
-    permanent_landmark = Column(String)
+    permanent_landmark = Column(String(255))
     permanent_city = Column(String(255))
     permanent_state = Column(String(255))
     permanent_pin_code = Column(Integer)
@@ -70,7 +70,7 @@ class BackgroundCheckForm(Base):
     acknowledgment = Column(Boolean)
     
     # Status and tracking fields
-    status = Column(String, default="draft", index=True)
+    status = Column(String(10), default="draft", index=True)
     remarks = Column(Text)
     
     # Timestamps
@@ -93,5 +93,3 @@ class BackgroundCheckForm(Base):
     
     def __repr__(self):
         return f"<BackgroundCheckForm(id={self.id}, candidate_name='{self.candidate_name}', status='{self.status}')>"
-
-__all__ = ['BackgroundCheckForm', 'Base']

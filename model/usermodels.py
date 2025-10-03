@@ -21,8 +21,13 @@ class User(Base):
     appreciations_given = relationship("Appreciation", foreign_keys="[Appreciation.given_by_id]", back_populates="given_by", cascade="all, save-update, delete")
     
     # Expense management relationships
-    expense_claims = relationship("ExpenseClaim", foreign_keys="[ExpenseClaim.employee_id]", back_populates="user")
-    approved_claims = relationship("ExpenseClaim", foreign_keys="[ExpenseClaim.approver_id]", back_populates="approver")
-    expense_approvals = relationship("ExpenseApproval", foreign_keys="[ExpenseApproval.approver_id]", back_populates="approver")
-    expense_reimbursements = relationship("ExpenseReimbursement", foreign_keys="[ExpenseReimbursement.processed_by]", back_populates="processor")
-    software_licenses = relationship("SoftwareLicense", back_populates="user")
+    expense_claims = relationship("ExpenseClaim", back_populates="user", foreign_keys="[ExpenseClaim.user_id]", cascade="all, delete-orphan")
+    approved_expense_claims = relationship("ExpenseClaim", back_populates="approver", foreign_keys="[ExpenseClaim.approver_id]")
+
+
+
+    # Asset management relationships  
+    assigned_assets = relationship("Asset", foreign_keys="[Asset.assigned_to]", back_populates="assigned_user")
+    approved_assets = relationship("Asset", foreign_keys="[Asset.approved_by]", back_populates="approver")
+    asset_claims = relationship("AssetClaim", foreign_keys="[AssetClaim.employee_id]", back_populates="employee")
+    processed_claims = relationship("AssetClaim", foreign_keys="[AssetClaim.processed_by]", back_populates="processor")

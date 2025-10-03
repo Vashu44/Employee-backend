@@ -39,6 +39,8 @@ from router.thoughts_router import router as thoughts_router
 from router.find_weather import router as find_weather
 from router.appreciation_router import router as appreciation_router
 from router.expense_router import router as expense_router
+from router.asset_router import router as asset_router
+from router.report_router import router as report_router
 
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -67,31 +69,22 @@ redis_client = RedisClient()
 
 
 # initialize the database
-app = FastAPI()
+app = FastAPI(
+    title="Employee Management API",
+    description="API for managing Employee`s details.",
+    version="2.0.5",
+)
 
 app.mount("/static", StaticFiles(directory="./static"), name="static")
 app.include_router(find_weather, tags=["Weather"])
 app.mount("/admin", admin_panel)
 
-# Robust CORS configuration: support comma-separated origins in env, fallback to '*' in dev
-_allowed_origins = []
-if REACT_APP_API_URL:
-    # allow comma-separated list of origins in env
-    _allowed_origins = [o.strip() for o in REACT_APP_API_URL.split(',') if o.strip()]
-if not _allowed_origins:
-    # no origin configured -> allow all origins (development convenience)
-    _allowed_origins = ["*"]
-
-# If we allow all origins, we should not set allow_credentials=True (browsers reject wildcard with credentials)
-_allow_credentials = False if _allowed_origins == ["*"] else True
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_allowed_origins,
-    allow_credentials=_allow_credentials,
+    allow_origins=[REACT_APP_API_URL],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["set-cookie"],
 )
 
 Base.metadata.create_all(bind=engine)
@@ -596,4 +589,6 @@ app.include_router(query_router, tags=["Queries"])
 app.include_router(thoughts_router, tags=["Thoughts"])
 app.include_router(appreciation_router, tags=["Appreciation"])
 app.include_router(expense_router, tags=["Expense Management"])
+app.include_router(asset_router, tags=["Asset Management"])
+app.include_router(report_router, tags=["Reports"])
 

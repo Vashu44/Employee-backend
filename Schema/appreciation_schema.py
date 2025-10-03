@@ -16,6 +16,10 @@ class BadgeLevelEnum(str, Enum):
     SILVER = "silver"
     BRONZE = "bronze"
 
+# Missing UserAction class - this was the cause of the import error
+class UserAction(BaseModel):
+    user_id: int
+
 class AppreciationCreate(BaseModel):
     employee_id: int
     given_by_id: int 
@@ -77,6 +81,7 @@ class EmployeeAppreciationSummary(BaseModel):
 
 class DashboardAppreciation(BaseModel):
     id: int
+    employee_id: int  # Added this field that was missing
     employee_username: str
     award_type: str
     badge_level: str
@@ -97,6 +102,36 @@ class MonthlyHighlightResponse(BaseModel):
     class Config:
         from_attributes = True
 
+# --- LIKE AND COMMENT SCHEMAS ---
+
+class LikeResponse(BaseModel):
+    total_likes: int
+    is_liked_by_user: bool
+
+class LikedUser(BaseModel):
+    user_id: int
+    username: str
+    email: str
+    liked_at: datetime
+
+class LikeDetailResponse(BaseModel):
+    appreciation_id: int
+    total_likes: int
+    is_liked_by_user: bool
+    liked_users: List[LikedUser]
+
+class CommentCreate(BaseModel):
+    text: str
+    user_id: int  # This field is required by the router
+    
+    @validator('text')
+    def validate_text(cls, v):
+        if not v.strip():
+            raise ValueError('Comment text cannot be empty')
+        if len(v) > 500:
+            raise ValueError('Comment text cannot exceed 500 characters')
+        return v.strip()
+
 class CommentResponse(BaseModel):
     id: int
     user_id: int
@@ -107,19 +142,6 @@ class CommentResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# FIXED: Added user_id field to CommentCreate as required by the router
-class CommentCreate(BaseModel):
-    text: str
-    user_id: int  # This field was missing and is required by the router
-    
-    @validator('text')
-    def validate_text(cls, v):
-        if not v.strip():
-            raise ValueError('Comment text cannot be empty')
-        if len(v) > 500:
-            raise ValueError('Comment text cannot exceed 500 characters')
-        return v.strip()
-
-class LikeResponse(BaseModel):
-    total_likes: int
-    is_liked_by_user: bool
+class EngagementResponse(BaseModel):
+    appreciation_id: int
+    engagement: dict  

@@ -18,5 +18,3 @@ class LeaveApplication(Base):
     applied_date = Column(DateTime, default=datetime.utcnow)
     approved_by = Column(String(50), nullable=True) # HR MR
 
-# create the database tables
-usermodels.Base.metadata.create_all(bind=engine)
