@@ -111,7 +111,23 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
+
+# Add custom middleware to ensure CORS headers are always present
+@app.middleware("http")
+async def add_cors_header(request, call_next):
+    response = await call_next(request)
+    origin = request.headers.get("origin")
+    
+    # If origin is in allowed list, add CORS header
+    if origin in allowed_origins or "*" in allowed_origins:
+        response.headers["Access-Control-Allow-Origin"] = origin if "*" not in allowed_origins else "*"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    
+    return response
 
 # Mount static files and routes AFTER CORS
 app.mount("/static", StaticFiles(directory="./static"), name="static")
