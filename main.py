@@ -83,6 +83,9 @@ else:
     if "http://localhost:3000" not in allowed_origins:
         allowed_origins.append("http://localhost:3000")
 
+# TEMPORARY: Force wildcard for testing (REMOVE IN PRODUCTION)
+allowed_origins = ["*"]
+
 print("=" * 60)
 print("CORS Configuration:")
 print(f"REACT_APP_API_URL env: '{REACT_APP_API_URL}'")
