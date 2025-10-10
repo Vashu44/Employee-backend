@@ -61,8 +61,25 @@ REFRESH_TOKEN_EXPIRE_DAYS = os.getenv("REFRESH_TOKEN_EXPIRE_DAYS")
 
 CACHE_DURATION = os.getenv("CACHE_DURATION")
 
-REACT_APP_API_URL = os.getenv("REACT_APP_API_URL")
-print("Allowed Origin:", REACT_APP_API_URL)
+# Read CORS origins from environment variables
+REACT_APP_API_URL = os.getenv("REACT_APP_API_URL", "")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "")
+
+# Parse comma-separated origins and create list
+allowed_origins = []
+for env_var in [REACT_APP_API_URL, FRONTEND_URL]:
+    if env_var:
+        origins = [origin.strip() for origin in env_var.split(",") if origin.strip()]
+        allowed_origins.extend(origins)
+
+# Remove duplicates while preserving order
+allowed_origins = list(dict.fromkeys(allowed_origins))
+
+# If no origins configured, allow localhost for development
+if not allowed_origins:
+    allowed_origins = ["http://localhost:3000", "http://localhost:8000"]
+
+print("Allowed CORS Origins:", allowed_origins)
 
 # Initialize Redis client
 redis_client = RedisClient()
@@ -81,7 +98,7 @@ app.mount("/admin", admin_panel)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[REACT_APP_API_URL],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
