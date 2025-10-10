@@ -75,11 +75,20 @@ for env_var in [REACT_APP_API_URL, FRONTEND_URL]:
 # Remove duplicates while preserving order
 allowed_origins = list(dict.fromkeys(allowed_origins))
 
-# If no origins configured, allow localhost for development
+# IMPORTANT: Always allow these origins as fallback
 if not allowed_origins:
-    allowed_origins = ["http://localhost:3000", "http://localhost:8000"]
+    allowed_origins = ["*"]  # Allow all origins if none specified (development mode)
+else:
+    # Ensure localhost is always included for development
+    if "http://localhost:3000" not in allowed_origins:
+        allowed_origins.append("http://localhost:3000")
 
-print("Allowed CORS Origins:", allowed_origins)
+print("=" * 60)
+print("CORS Configuration:")
+print(f"REACT_APP_API_URL env: '{REACT_APP_API_URL}'")
+print(f"FRONTEND_URL env: '{FRONTEND_URL}'")
+print(f"Allowed CORS Origins: {allowed_origins}")
+print("=" * 60)
 
 # Initialize Redis client
 redis_client = RedisClient()
@@ -92,10 +101,7 @@ app = FastAPI(
     version="2.0.5",
 )
 
-app.mount("/static", StaticFiles(directory="./static"), name="static")
-app.include_router(find_weather, tags=["Weather"])
-app.mount("/admin", admin_panel)
-
+# IMPORTANT: Add CORS middleware FIRST, before mounting other apps
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -104,9 +110,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files and routes AFTER CORS
+app.mount("/static", StaticFiles(directory="./static"), name="static")
+app.include_router(find_weather, tags=["Weather"])
+app.mount("/admin", admin_panel)
+
 Base.metadata.create_all(bind=engine)
 
 db_dependency = Annotated[Session, Depends(get_db)]
+
+
+# Debug endpoint to check environment variables and CORS configuration
+@app.get("/debug/cors-config")
+async def debug_cors_config():
+    """Returns CORS configuration for debugging"""
+    return {
+        "status": "ok",
+        "cors_origins": allowed_origins,
+        "env_vars": {
+            "REACT_APP_API_URL": os.getenv("REACT_APP_API_URL", "NOT_SET"),
+            "FRONTEND_URL": os.getenv("FRONTEND_URL", "NOT_SET"),
+        }
+    }
 
 
 # Define the User model (Schema)
