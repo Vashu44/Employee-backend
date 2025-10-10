@@ -77,14 +77,14 @@ allowed_origins = list(dict.fromkeys(allowed_origins))
 
 # IMPORTANT: Always allow these origins as fallback
 if not allowed_origins:
-    allowed_origins = ["*"]  # Allow all origins if none specified (development mode)
+    # If no origins configured, allow common development origins
+    allowed_origins = ["http://localhost:3000", "http://localhost:8000"]
+    print("⚠️ WARNING: No CORS origins configured in environment variables!")
+    print("⚠️ Using default development origins. Set FRONTEND_URL in production!")
 else:
     # Ensure localhost is always included for development
     if "http://localhost:3000" not in allowed_origins:
         allowed_origins.append("http://localhost:3000")
-
-# TEMPORARY: Force wildcard for testing (REMOVE IN PRODUCTION)
-allowed_origins = ["*"]
 
 print("=" * 60)
 print("CORS Configuration:")
