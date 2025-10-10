@@ -50,6 +50,48 @@ async def health_check():
     """Health check endpoint"""
     return {"status": "ok", "message": "Expense management service is healthy"}
 
+# Simple Stats
+@router.get("/stats")
+async def get_expense_stats(db: Session = Depends(get_db)):
+    """Get simple expense claims statistics"""
+    try:
+        approved_count = db.query(ExpenseClaim).filter(ExpenseClaim.status == "approved").count()
+        pending_count = db.query(ExpenseClaim).filter(ExpenseClaim.status == "pending").count()
+        reimbursed_count = db.query(ExpenseClaim).filter(ExpenseClaim.status == "reimbursed").count()
+        rejected_count = db.query(ExpenseClaim).filter(ExpenseClaim.status == "rejected").count()
+        return {
+            "approved_claims": approved_count,
+            "pending_claims": pending_count,
+            "reimbursed_claims": reimbursed_count,
+            "rejected_claims": rejected_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error retrieving stats: {str(e)}")
+
+# Document Download
+@router.get("/documents/{document_id}/download")
+async def download_document(document_id: int, db: Session = Depends(get_db)):
+    """Download expense document by ID"""
+    try:
+        from fastapi.responses import FileResponse
+        
+        document = db.query(ExpenseDocument).filter(ExpenseDocument.id == document_id).first()
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        if not os.path.exists(document.file_path):
+            raise HTTPException(status_code=404, detail="File not found on server")
+        
+        return FileResponse(
+            path=document.file_path,
+            filename=document.file_name,
+            media_type=document.mime_type
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error downloading document: {str(e)}")
+
 # Categories Management
 @router.get("/categories", response_model=List[ExpenseCategoryResponse])
 async def get_categories(

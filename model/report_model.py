@@ -1,55 +1,44 @@
-from sqlalchemy import Column, Integer, String, DateTime, JSON, Boolean, Text, ForeignKey
+# model/report_model.py - COMPLETE VERSION WITH BOTH NAMES
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from db.database import Base
 from datetime import datetime
+from db.database import Base
 
-class ReportTemplate(Base):
-    __tablename__ = "report_templates"
+class HRReport(Base):
+    __tablename__ = "reports"
     
     id = Column(Integer, primary_key=True, index=True)
-    template_name = Column(String(200), nullable=False)
-    template_type = Column(String(50), nullable=False)  # employee, expense, timesheet, etc.
-    report_format = Column(String(20), nullable=False)  # monthly, yearly, custom
-    template_config = Column(JSON, nullable=False)  # Flexible configuration
-    include_charts = Column(Boolean, default=True)
-    chart_types = Column(JSON, default=[])  # List of chart types
-    office_template_links = Column(JSON, default={})  # Links to Word/Excel/PPT templates
-    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    title = Column(String(255), nullable=False, index=True)
+    description = Column(Text, nullable=False)
+    month = Column(Integer, nullable=False, index=True)
+    report_type = Column(String(50), nullable=False, default="monthly")
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    document_path = Column(String(500), nullable=True)
+    status = Column(String(20), nullable=False, default="submitted", index=True)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
     
-    # Relationships
-    creator = relationship("User", foreign_keys=[created_by])
-    generated_reports = relationship("GeneratedReport", back_populates="template", cascade="all, delete-orphan")
+    # One-way relationship (no back_populates to avoid User model issues)
+    user = relationship("User")
+    
+    def __repr__(self):
+        return f"<HRReport(id={self.id}, title='{self.title}', user_id={self.user_id}, month={self.month})>"
+    
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "title": self.title,
+            "description": self.description,
+            "month": self.month,
+            "report_type": self.report_type,
+            "user_id": self.user_id,
+            "document_path": self.document_path,
+            "status": self.status,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "username": self.user.username if self.user else None,
+            "has_document": bool(self.document_path)
+        }
 
-class GeneratedReport(Base):
-    __tablename__ = "generated_reports"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    template_id = Column(Integer, ForeignKey("report_templates.id"), nullable=False)
-    template_name = Column(String(200), nullable=False)
-    report_type = Column(String(50), nullable=False)
-    generated_data = Column(JSON, nullable=False)  # Store the query results
-    charts_data = Column(JSON, default={})  # Store base64 encoded charts
-    pdf_path = Column(String(500))  # Path to generated PDF
-    generated_by = Column(Integer, ForeignKey("users.id"), nullable=False)
-    generated_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    template = relationship("ReportTemplate", back_populates="generated_reports")
-    generator = relationship("User", foreign_keys=[generated_by])
-
-class EmailLog(Base):
-    __tablename__ = "email_logs"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    report_id = Column(Integer, ForeignKey("generated_reports.id"), nullable=False)
-    sender_email = Column(String(100), nullable=False)
-    recipient_email = Column(String(100), nullable=False)
-    subject = Column(String(300), nullable=False)
-    message = Column(Text)
-    sent_at = Column(DateTime, default=datetime.utcnow)
-    status = Column(String(20), default="sent")  # sent, failed, pending
-    
-    # Relationships
-    report = relationship("GeneratedReport")
+# Create alias for backward compatibility
+Report = HRReport  # This allows importing both 'Report' and 'HRReport'
