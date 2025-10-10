@@ -12,20 +12,49 @@ class RedisClient:
         self.client = None
         self.is_available = False
         
+        # Try Upstash Redis first (REST API)
+        upstash_url = os.getenv("UPSTASH_REDIS_REST_URL")
+        upstash_token = os.getenv("UPSTASH_REDIS_REST_TOKEN")
+        
+        # Try traditional Redis URL (for Upstash TCP connection)
+        redis_url = os.getenv("REDIS_URL")  # Format: rediss://default:token@host:6379
+        
         try:
-            self.client = redis.Redis(
-                host=os.getenv("REDIS_HOST", "localhost"), 
-                port=int(os.getenv("REDIS_PORT", 6379)), 
-                db=int(os.getenv("REDIS_DB", 0)), 
-                decode_responses=True,
-                socket_connect_timeout=5,
-                socket_timeout=5,
-                retry_on_timeout=True
-            )
-            # Test the connection
-            self.client.ping()
-            self.is_available = True
-            logger.info("✅ Redis connection established successfully")
+            if redis_url:
+                # Use Redis URL (Upstash TCP with SSL)
+                logger.info(f"🔌 Connecting to Redis via URL (Upstash TCP)...")
+                self.client = redis.from_url(
+                    redis_url,
+                    decode_responses=True,
+                    socket_connect_timeout=10,
+                    socket_timeout=10,
+                    retry_on_timeout=True,
+                    ssl_cert_reqs=None  # For Upstash SSL
+                )
+                self.client.ping()
+                self.is_available = True
+                logger.info("✅ Redis connection established via URL (Upstash)")
+            elif upstash_url and upstash_token:
+                # Upstash REST API requires special library (upstash-redis)
+                logger.warning("⚠️ Upstash REST credentials found but 'upstash-redis' library not installed")
+                logger.info("💡 Tip: Use REDIS_URL with TCP connection instead")
+                self.is_available = False
+            else:
+                # Fallback to local Redis
+                logger.info("🔌 Trying local Redis connection...")
+                self.client = redis.Redis(
+                    host=os.getenv("REDIS_HOST", "localhost"), 
+                    port=int(os.getenv("REDIS_PORT", 6379)), 
+                    db=int(os.getenv("REDIS_DB", 0)), 
+                    decode_responses=True,
+                    socket_connect_timeout=5,
+                    socket_timeout=5,
+                    retry_on_timeout=True
+                )
+                self.client.ping()
+                self.is_available = True
+                logger.info("✅ Redis connection established (Local)")
+                
         except redis.ConnectionError as e:
             logger.warning(f"⚠️ Redis connection failed: {str(e)}")
             logger.warning("⚠️ Redis is not available - application will run without caching")
@@ -103,4 +132,4 @@ class RedisClient:
             return False
         except Exception as e:
             logger.error(f"Unexpected error checking key {key}: {str(e)}")
-            raise
+            return False
