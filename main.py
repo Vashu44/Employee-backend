@@ -1,6 +1,7 @@
 from __future__ import annotations
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Response, Body
+from fastapi.responses import JSONResponse
 from fastapi_mail import FastMail, MessageSchema, MessageType
 from pydantic import BaseModel, EmailStr, validator
 from typing import Annotated
@@ -114,19 +115,32 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-# Add custom middleware to ensure CORS headers are always present
+"""
+Ensure CORS headers are added even when downstream handlers raise exceptions
+and handle OPTIONS preflight early.
+"""
 @app.middleware("http")
-async def add_cors_header(request, call_next):
-    response = await call_next(request)
+async def add_cors_header(request: Request, call_next):
     origin = request.headers.get("origin")
-    
-    # If origin is in allowed list, add CORS header
-    if origin in allowed_origins or "*" in allowed_origins:
+
+    # Short-circuit preflight
+    if request.method == "OPTIONS":
+        response = Response(status_code=200)
+    else:
+        try:
+            response = await call_next(request)
+        except Exception as exc:
+            # Log and convert to JSON 500 while still attaching CORS headers below
+            logger.exception("Unhandled exception while processing request")
+            response = JSONResponse(status_code=500, content={"detail": "Internal server error"})
+
+    # If origin is in allowed list, add CORS headers
+    if origin and (origin in allowed_origins or "*" in allowed_origins):
         response.headers["Access-Control-Allow-Origin"] = origin if "*" not in allowed_origins else "*"
         response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "*"
-        response.headers["Access-Control-Allow-Headers"] = "*"
-    
+        response.headers["Access-Control-Allow-Methods"] = ", ".join(["GET","POST","PUT","PATCH","DELETE","OPTIONS"]) if "*" not in allowed_origins else "*"
+        response.headers["Access-Control-Allow-Headers"] = request.headers.get("access-control-request-headers", "*")
+
     return response
 
 # Mount static files and routes AFTER CORS
