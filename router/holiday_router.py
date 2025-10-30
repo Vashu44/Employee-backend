@@ -8,7 +8,8 @@ import logging
 # Import your existing modules (adjust paths as needed)
 from db.database import get_db
 from model.region_model import Region
-from Schema.holiday_schema import HolidayCalendarResponse, HolidayResponse
+from Schema.holiday_schema import HolidayCalendarResponse, HolidayResponse,HolidayEventCreate, HolidayEventUpdate
+from model.holiday_model import Holiday
 from service.holiday_service import DatabaseHolidayService
 
 logger = logging.getLogger(__name__)
@@ -105,119 +106,119 @@ async def get_holiday_calendar(
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
-# @router.post("/add-event", response_model=dict)
-# async def add_holiday_event(
-#     event_data: HolidayEventCreate,
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     Add a new holiday event to the public calendar (calendar_id = '000')
-#     """
-#     try:
-#         # Create new holiday event
-#         new_holiday = Holiday(
-#             name=event_data.name,
-#             date=event_data.date,
-#             description=event_data.description,
-#             calendar_id="000",  # Default public calendar
-#             is_public=True
-#         )
+@router.post("/add-event", response_model=dict)
+async def add_holiday_event(
+    event_data: HolidayEventCreate,
+    db: Session = Depends(get_db)
+):
+    """
+    Add a new holiday event to the public calendar (calendar_id = '000')
+    """
+    try:
+        # Create new holiday event
+        new_holiday = Holiday(
+            name=event_data.name,
+            date=event_data.date,
+            description=event_data.description,
+            calendar_id="000",  # Default public calendar
+            is_public=True
+        )
         
-#         db.add(new_holiday)
-#         db.commit()
-#         db.refresh(new_holiday)
+        db.add(new_holiday)
+        db.commit()
+        db.refresh(new_holiday)
         
-#         return {
-#             "status": "success",
-#             "message": "Holiday event added successfully",
-#             "holiday_id": new_holiday.id,
-#             "calendar_id": "000"
-#         }
+        return {
+            "status": "success",
+            "message": "Holiday event added successfully",
+            "holiday_id": new_holiday.id,
+            "calendar_id": "000"
+        }
         
-#     except Exception as e:
-#         db.rollback()
-#         logger.error(f"Error adding holiday event: {str(e)}")
-#         raise HTTPException(status_code=500, detail=f"Failed to add holiday event: {str(e)}")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error adding holiday event: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to add holiday event: {str(e)}")
 
 
-# @router.put("/update-event/{holiday_id}", response_model=dict)
-# async def update_holiday_event(
-#     holiday_id: int,
-#     event_data: HolidayEventUpdate,
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     Update an existing holiday event in the public calendar
-#     """
-#     try:
-#         # Find the holiday by ID and ensure it's from public calendar
-#         holiday = db.query(Holiday).filter(
-#             Holiday.id == holiday_id,
-#             Holiday.calendar_id == "000"
-#         ).first()
+@router.put("/update-event/{holiday_id}", response_model=dict)
+async def update_holiday_event(
+    holiday_id: int,
+    event_data: HolidayEventUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    Update an existing holiday event in the public calendar
+    """
+    try:
+        # Find the holiday by ID and ensure it's from public calendar
+        holiday = db.query(Holiday).filter(
+            Holiday.id == holiday_id,
+            Holiday.calendar_id == "000"
+        ).first()
         
-#         if not holiday:
-#             raise HTTPException(status_code=404, detail="Holiday event not found in public calendar")
+        if not holiday:
+            raise HTTPException(status_code=404, detail="Holiday event not found in public calendar")
         
-#         # Update fields if provided
-#         if event_data.name is not None:
-#             holiday.name = event_data.name
-#         if event_data.date is not None:
-#             holiday.date = event_data.date
-#         if event_data.description is not None:
-#             holiday.description = event_data.description
+        # Update fields if provided
+        if event_data.name is not None:
+            holiday.name = event_data.name
+        if event_data.date is not None:
+            holiday.date = event_data.date
+        if event_data.description is not None:
+            holiday.description = event_data.description
         
-#         db.commit()
-#         db.refresh(holiday)
+        db.commit()
+        db.refresh(holiday)
         
-#         return {
-#             "status": "success",
-#             "message": "Holiday event updated successfully",
-#             "holiday_id": holiday.id,
-#             "calendar_id": "000"
-#         }
+        return {
+            "status": "success",
+            "message": "Holiday event updated successfully",
+            "holiday_id": holiday.id,
+            "calendar_id": "000"
+        }
         
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         db.rollback()
-#         logger.error(f"Error updating holiday event: {str(e)}")
-#         raise HTTPException(status_code=500, detail=f"Failed to update holiday event: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating holiday event: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to update holiday event: {str(e)}")
 
 
-# @router.delete("/delete-event/{holiday_id}", response_model=dict)
-# async def delete_holiday_event(
-#     holiday_id: int,
-#     db: Session = Depends(get_db)
-# ):
-#     """
-#     Delete a holiday event from the public calendar
-#     """
-#     try:
-#         # Find the holiday by ID and ensure it's from public calendar
-#         holiday = db.query(Holiday).filter(
-#             Holiday.id == holiday_id,
-#             Holiday.calendar_id == "000"
-#         ).first()
+@router.delete("/delete-event/{holiday_id}", response_model=dict)
+async def delete_holiday_event(
+    holiday_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a holiday event from the public calendar
+    """
+    try:
+        # Find the holiday by ID and ensure it's from public calendar
+        holiday = db.query(Holiday).filter(
+            Holiday.id == holiday_id,
+            Holiday.calendar_id == "000"
+        ).first()
         
-#         if not holiday:
-#             raise HTTPException(status_code=404, detail="Holiday event not found in public calendar")
+        if not holiday:
+            raise HTTPException(status_code=404, detail="Holiday event not found in public calendar")
         
-#         db.delete(holiday)
-#         db.commit()
+        db.delete(holiday)
+        db.commit()
         
-#         return {
-#             "status": "success",
-#             "message": "Holiday event deleted successfully",
-#             "holiday_id": holiday_id
-#         }
+        return {
+            "status": "success",
+            "message": "Holiday event deleted successfully",
+            "holiday_id": holiday_id
+        }
         
-#     except HTTPException:
-#         raise
-#     except Exception as e:
-#         db.rollback()
-#         logger.error(f"Error deleting holiday event: {str(e)}")
-#         raise HTTPException(status_code=500, detail=f"Failed to delete holiday event: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting holiday event: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete holiday event: {str(e)}")
 
 
 
