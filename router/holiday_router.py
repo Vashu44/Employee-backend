@@ -69,7 +69,6 @@ async def get_holiday_calendar(
                     date=h.date,
                     name=h.name,
                     type="holiday",
-                    description=h.description,
                     is_public=True,
                     calendar_id= h.calendar_id
                 ))
@@ -119,7 +118,6 @@ async def add_holiday_event(
         new_holiday = Holiday(
             name=event_data.name,
             date=event_data.date,
-            description=event_data.description,
             calendar_id="000",  # Default public calendar
             is_public=True
         )
@@ -165,8 +163,6 @@ async def update_holiday_event(
             holiday.name = event_data.name
         if event_data.date is not None:
             holiday.date = event_data.date
-        if event_data.description is not None:
-            holiday.description = event_data.description
         
         db.commit()
         db.refresh(holiday)
@@ -273,7 +269,6 @@ async def get_region_holiday_calendar(
                     date=h.date,
                     name=h.name,
                     type="holiday",
-                    description=h.description,
                     is_public=True
                 ))
             except Exception as e:

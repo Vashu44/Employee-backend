@@ -7,7 +7,6 @@ class HolidayResponse(BaseModel):
     date: date_type
     name: str
     type: str
-    description: Optional[str] = None
     is_public: bool
     calendar_id: Optional[int] = None 
     
@@ -18,14 +17,12 @@ class HolidayResponse(BaseModel):
 class HolidayEventCreate(BaseModel):
     name: str
     date: date_type
-    description: Optional[str] = None
     country_code: str = "IN"  # Default to India
     calendar_id: Optional[int] = None
 
 class HolidayEventUpdate(BaseModel):
     name: Optional[str] = None
     date: Optional[date_type] = None
-    description: Optional[str] = None
 
 
 class RegionResponse(BaseModel):

@@ -10,7 +10,6 @@ class Holiday(Base):
     id = Column(Integer, primary_key=True, index=True)
     date = Column(Date, nullable=False, index=True)
     name = Column(String(255), nullable=False)
-    description = Column(Text)
     is_active = Column(Boolean, default=True)
 
     # region_id = Column(Integer, nullable = True)            # ForeignKey("regions.id")
