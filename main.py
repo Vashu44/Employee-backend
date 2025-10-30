@@ -83,9 +83,16 @@ if not allowed_origins:
     print("⚠️ WARNING: No CORS origins configured in environment variables!")
     print("⚠️ Using default development origins. Set FRONTEND_URL in production!")
 else:
-    # Ensure localhost is always included for development
-    if "http://localhost:3000" not in allowed_origins:
-        allowed_origins.append("http://localhost:3000")
+    # Ensure common dev origins are always included for development
+    for dev_origin in [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "null",  # to support file:// origin during quick tests
+    ]:
+        if dev_origin not in allowed_origins:
+            allowed_origins.append(dev_origin)
 
 print("=" * 60)
 print("CORS Configuration:")
@@ -135,10 +142,10 @@ async def add_cors_header(request: Request, call_next):
             response = JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
     # If origin is in allowed list, add CORS headers
-    if origin and (origin in allowed_origins or "*" in allowed_origins):
+    if origin and (origin in allowed_origins or "*" in allowed_origins or origin == "null"):
         response.headers["Access-Control-Allow-Origin"] = origin if "*" not in allowed_origins else "*"
         response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = ", ".join(["GET","POST","PUT","PATCH","DELETE","OPTIONS"]) if "*" not in allowed_origins else "*"
+        response.headers["Access-Control-Allow-Methods"] = ", ".join(["GET","POST","PUT","PATCH","DELETE","OPTIONS"])
         response.headers["Access-Control-Allow-Headers"] = request.headers.get("access-control-request-headers", "*")
 
     return response
