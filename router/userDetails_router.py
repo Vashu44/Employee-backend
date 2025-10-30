@@ -95,6 +95,7 @@ async def get_users_by_project_name(project_name: str, db: Session = Depends(get
             user_info = {
                 "user_id": user_detail.user_id,
                 "username": user_detail.user.username,
+                "email": user_detail.user.email,
                 "project_name": user_detail.Project_name,   
             }
             users_list.append(user_info)

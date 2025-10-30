@@ -1,7 +1,6 @@
 from __future__ import annotations
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Response, Body
-from fastapi.responses import JSONResponse
 from fastapi_mail import FastMail, MessageSchema, MessageType
 from pydantic import BaseModel, EmailStr, validator
 from typing import Annotated
@@ -83,15 +82,9 @@ if not allowed_origins:
     print("⚠️ WARNING: No CORS origins configured in environment variables!")
     print("⚠️ Using default development origins. Set FRONTEND_URL in production!")
 else:
-    # Ensure common dev origins are always included for development
-    for dev_origin in [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ]:
-        if dev_origin not in allowed_origins:
-            allowed_origins.append(dev_origin)
+    # Ensure localhost is always included for development
+    if "http://localhost:3000" not in allowed_origins:
+        allowed_origins.append("http://localhost:3000")
 
 print("=" * 60)
 print("CORS Configuration:")
@@ -121,32 +114,19 @@ app.add_middleware(
     expose_headers=["*"],
 )
 
-"""
-Ensure CORS headers are added even when downstream handlers raise exceptions
-and handle OPTIONS preflight early.
-"""
+# Add custom middleware to ensure CORS headers are always present
 @app.middleware("http")
-async def add_cors_header(request: Request, call_next):
+async def add_cors_header(request, call_next):
+    response = await call_next(request)
     origin = request.headers.get("origin")
-
-    # Short-circuit preflight
-    if request.method == "OPTIONS":
-        response = Response(status_code=200)
-    else:
-        try:
-            response = await call_next(request)
-        except Exception as exc:
-            # Log and convert to JSON 500 while still attaching CORS headers below
-            logger.exception("Unhandled exception while processing request")
-            response = JSONResponse(status_code=500, content={"detail": "Internal server error"})
-
-    # If origin is in allowed list, add CORS headers
-    if origin and (origin in allowed_origins or "*" in allowed_origins or origin == "null"):
+    
+    # If origin is in allowed list, add CORS header
+    if origin in allowed_origins or "*" in allowed_origins:
         response.headers["Access-Control-Allow-Origin"] = origin if "*" not in allowed_origins else "*"
         response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = ", ".join(["GET","POST","PUT","PATCH","DELETE","OPTIONS"])
-        response.headers["Access-Control-Allow-Headers"] = request.headers.get("access-control-request-headers", "*")
-
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+    
     return response
 
 # Mount static files and routes AFTER CORS

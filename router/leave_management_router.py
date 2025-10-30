@@ -47,56 +47,21 @@ def get_leave_application(leave_id: int, db: Session = Depends(get_db)):
 
 @router.put("/leave-applications/{leave_id}/status")
 def update_leave_status(
-    leave_id: int,
-    status_update: LeaveStatusUpdate,
+    leave_id: int, 
+    status_update: LeaveStatusUpdate, 
     db: Session = Depends(get_db)
 ):
     """Update leave application status"""
-    try:
-        logger.info(
-            "Updating leave status",
-            extra={
-                "leave_id": leave_id,
-                "new_status": status_update.status,
-                "approved_by": status_update.approved_by,
-            },
-        )
-
-        valid_statuses = {"pending", "approved", "rejected"}
-        if status_update.status not in valid_statuses:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid status value '{status_update.status}'. Allowed: {', '.join(valid_statuses)}",
-            )
-
-        leave = db.query(LeaveApplication).filter(LeaveApplication.id == leave_id).first()
-        if not leave:
-            raise HTTPException(status_code=404, detail="Leave application not found")
-
-        leave.status = status_update.status
-        if status_update.approved_by:
-            leave.approved_by = status_update.approved_by
-
-        db.commit()
-        db.refresh(leave)
-
-        logger.info(
-            "Leave status updated successfully",
-            extra={
-                "leave_id": leave_id,
-                "persisted_status": leave.status,
-                "persisted_approved_by": leave.approved_by,
-            },
-        )
-
-        return {"message": "Status updated successfully", "leave_id": leave_id, "status": leave.status}
-
-    except HTTPException:
-        raise
-    except Exception as exc:
-        logger.exception("Failed to update leave status", extra={"leave_id": leave_id})
-        db.rollback()
-        raise HTTPException(status_code=500, detail="Failed to update leave status")
+    leave = db.query(LeaveApplication).filter(LeaveApplication.id == leave_id).first()
+    if not leave:
+        raise HTTPException(status_code=404, detail="Leave application not found")
+    
+    setattr(leave, "status", status_update.status)
+    if status_update.approved_by:
+        setattr(leave, "approved_by", status_update.approved_by)
+    
+    db.commit()
+    return {"message": "Status updated successfully"}
 
 @router.get("/calendar/leave-days/", response_model=List[CalendarLeaveDay])
 def get_calendar_leave_days(
