@@ -89,7 +89,6 @@ else:
         "http://127.0.0.1:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "null",  # to support file:// origin during quick tests
     ]:
         if dev_origin not in allowed_origins:
             allowed_origins.append(dev_origin)
