@@ -1,15 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session
 from datetime import datetime
 from calendar import monthcalendar, month_name
-from typing import Optional
+from typing import Optional, List
 import logging
+import csv
+import io
+from datetime import datetime
 
 # Import your existing modules (adjust paths as needed)
 from db.database import get_db
 from model.region_model import Region
-from Schema.holiday_schema import HolidayCalendarResponse, HolidayResponse,HolidayEventCreate, HolidayEventUpdate
 from model.holiday_model import Holiday
+from Schema.holiday_schema import HolidayCalendarResponse, HolidayResponse,HolidayEventCreate,HolidayEventUpdate,CSVUploadResponse
 from service.holiday_service import DatabaseHolidayService
 
 logger = logging.getLogger(__name__)
@@ -70,7 +73,7 @@ async def get_holiday_calendar(
                     name=h.name,
                     # type="holiday",
                     # is_public=True,
-                    calendar_id= h.calendar_id
+                    calendar_id=h.calendar_id
                 ))
             except Exception as e:
                 logger.error(f"Error processing holiday {h.id}: {str(e)}")
@@ -268,6 +271,7 @@ async def get_region_holiday_calendar(
                     date=h.date,
                     name=h.name,
                     type="holiday",
+                    description=h.description,
                     is_public=True
                 ))
             except Exception as e:
@@ -299,3 +303,71 @@ async def get_region_holiday_calendar(
     except Exception as e:
         logger.error(f"Error in region holiday calendar: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@router.post("/upload-csv", response_model=CSVUploadResponse)
+async def upload_holiday_csv(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    """
+        Upload a CSV file containing holiday data.
+        Expected CSV format:
+            name,date,calendar_id
+            New Year,2025-01-01,000
+            Republic Day,2025-01-26,000
+    """
+    if not file.filename.endswith('.csv'):
+        raise HTTPException(status_code=400, detail="Only CSV files are allowed")
+
+    try:
+        # Read the CSV file
+        contents = await file.read()
+        csv_text = contents.decode('utf-8')
+        csv_reader = csv.DictReader(io.StringIO(csv_text))
+        
+        total_processed = 0
+        successful_inserts = 0
+        failed_inserts = 0
+        errors = []
+
+        for row in csv_reader:
+            total_processed += 1
+            try:
+                # Convert date string to datetime.date object
+                date_str = row.get('date', '').strip()
+                try:
+                    holiday_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                except ValueError:
+                    raise ValueError(f"Invalid date format for {date_str}. Expected format: YYYY-MM-DD")
+
+                # Create new holiday
+                new_holiday = Holiday(
+                    name=row.get('name', '').strip(),
+                    date=holiday_date,
+                    calendar_id=row.get('calendar_id', '000').strip()
+                )
+                
+                # Add to database
+                db.add(new_holiday)
+                db.commit()
+                successful_inserts += 1
+                
+            except Exception as e:
+                failed_inserts += 1
+                errors.append(f"Row {total_processed}: {str(e)}")
+                db.rollback()
+                continue
+
+        return CSVUploadResponse(
+            status="success" if failed_inserts == 0 else "partial_success",
+            message="CSV upload completed",
+            total_processed=total_processed,
+            successful_inserts=successful_inserts,
+            failed_inserts=failed_inserts,
+            errors=errors if errors else None
+        )
+
+    except Exception as e:
+        logger.error(f"Error processing CSV file: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to process CSV file: {str(e)}")

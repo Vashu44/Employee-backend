@@ -13,8 +13,8 @@ class Holiday(Base):
     is_active = Column(Boolean, default=True)
 
     # region_id = Column(Integer, nullable = True)            # ForeignKey("regions.id")
-    country_code = Column(String(10), nullable=False, index=True)
-    calendar_id = Column(Integer, default= 000)
+    country_code = Column(String(10), nullable=False, index=True, default="IN")
+    calendar_id = Column(Integer, default=0)
 
     # Metadata
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -1,6 +1,15 @@
 from pydantic import BaseModel
 from typing import Optional, List, Dict
 from datetime import date as date_type
+from fastapi import UploadFile, File
+
+class CSVUploadResponse(BaseModel):
+    status: str
+    message: str
+    total_processed: int
+    successful_inserts: int
+    failed_inserts: int
+    errors: Optional[List[str]] = None
 
 class HolidayResponse(BaseModel):
     id: int
