@@ -6,8 +6,8 @@ class HolidayResponse(BaseModel):
     id: int
     date: date_type
     name: str
-    type: str
-    is_public: bool
+    # type: str
+    # is_public: bool
     calendar_id: Optional[int] = None 
     
     class Config:

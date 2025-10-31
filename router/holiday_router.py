@@ -68,8 +68,8 @@ async def get_holiday_calendar(
                     id=h.id,
                     date=h.date,
                     name=h.name,
-                    type="holiday",
-                    is_public=True,
+                    # type="holiday",
+                    # is_public=True,
                     calendar_id= h.calendar_id
                 ))
             except Exception as e:
@@ -119,7 +119,6 @@ async def add_holiday_event(
             name=event_data.name,
             date=event_data.date,
             calendar_id="000",  # Default public calendar
-            is_public=True
         )
         
         db.add(new_holiday)
