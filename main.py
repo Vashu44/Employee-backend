@@ -80,7 +80,7 @@ allowed_origins = list(dict.fromkeys(allowed_origins))
 # IMPORTANT: Always allow these origins as fallback
 if not allowed_origins:
     # If no origins configured, allow common development origins
-    allowed_origins = ["http://localhost:3000", "http://localhost:8000"]
+    allowed_origins = ["http://localhost:3000", "https://concientech-intranet-portal.netlify.app"]
     print("⚠️ WARNING: No CORS origins configured in environment variables!")
     print("⚠️ Using default development origins. Set FRONTEND_URL in production!")
 else:
