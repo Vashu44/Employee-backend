@@ -10,7 +10,7 @@ class User(Base):
     email = Column(String(50), unique=True, index=True)
     password = Column(String(100))
     is_verified = Column(Integer, default=0)
-    role = Column(String(10), nullable=False)  # e.g., 'admin', 'user', 'manager'
+    role = Column(String(10), nullable=False)
     last_login = Column(DateTime, default=None)
 
     user_details = relationship("UserDetails", back_populates="user", uselist=False)

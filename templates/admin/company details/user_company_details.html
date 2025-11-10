@@ -18,7 +18,6 @@
                         <th>Role</th>
                         <th>Joining Date</th>
                         <th>Project</th>
-                        <th>Description</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -30,8 +29,7 @@
                         <td>{{ detail.current_Department or '-' }}</td>
                         <td>{{ detail.current_role or '-' }}</td>
                         <td>{{ detail.date_of_joining.strftime('%Y-%m-%d') if detail.date_of_joining else '-' }}</td>
-                        <td>{{ detail.Project_name or '-' }}</td>
-                        <td>{{ (detail.project_description.split()[:8]|join(' ') ~ ('...' if detail.project_description and detail.project_description.split()|length > 8 else '')) if detail.project_description else '-' }}</td>
+                        <td>{{ detail.project_name or '-' }}</td>
                         <td>
                             <a href="/admin/company details/view/{{ detail.user_id }}" class="btn btn-primary btn-md">
                                 View

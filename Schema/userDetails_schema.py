@@ -7,8 +7,7 @@ logger = logging.getLogger(__name__)
 
 # Pydantic schema for updating basic user details
 class UserBasicDetailsUpdate(BaseModel):
-    full_name: Optional[str] = Field(None, max_length=255, description="Full name")
-    personal_email: Optional[str] = Field(None, max_length=255, description="Personal email address")
+    project_name: Optional[str] = Field(None, max_length=255, description="Project name")
 
     class Config:
         json_encoders = {
@@ -16,8 +15,7 @@ class UserBasicDetailsUpdate(BaseModel):
         }
         json_schema_extra = {
             "example": {
-                "full_name": "John Doe",
-                "personal_email": "user@example.com", 
+                "project_name": "Project Name"
             }
         }
 

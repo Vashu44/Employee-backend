@@ -1,14 +1,5 @@
-from fastapi.staticfiles import StaticFiles
-from fastapi import FastAPI, HTTPException, Depends, status, Request, Response, UploadFile, Form, File, Body
-from fastapi_mail import FastMail, MessageSchema, MessageType
-from pydantic import BaseModel, EmailStr, validator
-from typing import Annotated, Optional, List
-from datetime import datetime
-import model.usermodels as usermodels
-from model.userDetails_model import UserDetails
-from db.database import engine, get_db, Base as DatabaseBase 
-from sqlalchemy import func
-from sqlalchemy.orm import Session
+from pydantic import BaseModel, validator
+from typing import Optional
 
 class NicknameRequest(BaseModel):
     nickname: str

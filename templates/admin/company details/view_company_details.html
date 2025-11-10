@@ -72,29 +72,9 @@
                         </div>
                         <div class="mb-1">
                             <label class="form-label">Current Role : <span class="text-secondary">{{ user_detail.current_role or 'Not assigned' }}</span></label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Project Details -->
-            <div class="col-md-6 mb-2">
-                <div class="card">
-                    <div class="card-header">
-                        <h4 class="card-title">Project Details</h4>
-                    </div>
-                    <div class="card-body">
+                        </div> 
                         <div class="mb-1">
-                            <label class="form-label">Project Name : <span class="text-secondary">{{ user_detail.Project_name or 'Not assigned' }}</span></label>
-                        </div>
-                        <div class="mb-1">
-                            <label class="form-label">Project Start Date : <span class="text-secondary">{{ user_detail.project_Start_date.strftime('%Y-%m-%d') if user_detail.project_Start_date else 'Not specified' }}</span></label>
-                        </div>
-                        <div class="mb-1">
-                            <label class="form-label">Project End Date : <span class="text-secondary">{{ user_detail.project_End_date.strftime('%Y-%m-%d') if user_detail.project_End_date else 'Not specified' }}</span></label>
-                        </div>
-                        <div class="mb-1">
-                            <label class="form-label">Project Description : <span class="text-secondary">{{ user_detail.project_description or 'No description provided' }}</span></label>
+                            <label class="form-label">Project Name : <span class="text-secondary">{{ user_detail.project_name or 'Not assigned' }}</span></label>
                         </div>
                     </div>
                 </div>

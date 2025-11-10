@@ -1,44 +1,28 @@
-# model/report_model.py - COMPLETE VERSION WITH BOTH NAMES
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+# model/report_model.py - Enhanced for all MySQL query types
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
-from datetime import datetime
 from db.database import Base
+from datetime import datetime
 
 class HRReport(Base):
-    __tablename__ = "reports"
+    __tablename__ = "hr_reports"
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(255), nullable=False, index=True)
-    description = Column(Text, nullable=False)
-    month = Column(Integer, nullable=False, index=True)
-    report_type = Column(String(50), nullable=False, default="monthly")
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
-    document_path = Column(String(500), nullable=True)
-    status = Column(String(20), nullable=False, default="submitted", index=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    query_category = Column(String(10), nullable=False)  # DDL, DML, DQL, DCL, TCL
+    query_type = Column(String(20), nullable=False)  # SELECT, INSERT, UPDATE, DELETE, etc.
+    sql_query = Column(Text, nullable=False)
+    result_data = Column(Text, nullable=True)  # JSON string of results
+    affected_rows = Column(Integer, default=0)
+    execution_time = Column(String(20), nullable=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    is_approved = Column(Boolean, default=False)  # For dangerous operations
+    approved_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    status = Column(String(20), default="pending")  # pending, completed, failed, requires_approval
     
-    # One-way relationship (no back_populates to avoid User model issues)
-    user = relationship("User")
-    
-    def __repr__(self):
-        return f"<HRReport(id={self.id}, title='{self.title}', user_id={self.user_id}, month={self.month})>"
-    
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "title": self.title,
-            "description": self.description,
-            "month": self.month,
-            "report_type": self.report_type,
-            "user_id": self.user_id,
-            "document_path": self.document_path,
-            "status": self.status,
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
-            "username": self.user.username if self.user else None,
-            "has_document": bool(self.document_path)
-        }
-
-# Create alias for backward compatibility
-Report = HRReport  # This allows importing both 'Report' and 'HRReport'
+    # Relationships
+    user = relationship("User", back_populates="hr_reports", foreign_keys=[user_id])
+    approver = relationship("User", foreign_keys=[approved_by])

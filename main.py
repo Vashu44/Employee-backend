@@ -41,6 +41,8 @@ from router.appreciation_router import router as appreciation_router
 from router.expense_router import router as expense_router
 from router.asset_router import router as asset_router
 from router.report_router import router as report_router
+from router.ai_query import router as ai_query_router
+from router.project_router import router as project_router
 
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -651,5 +653,6 @@ app.include_router(thoughts_router, tags=["Thoughts"])
 app.include_router(appreciation_router, tags=["Appreciation"])
 app.include_router(expense_router, tags=["Expense Management"])
 app.include_router(asset_router, tags=["Asset Management"])
-app.include_router(report_router, tags=["Reports"])
-
+app.include_router(report_router)
+app.include_router(ai_query_router)
+app.include_router(project_router, tags=["Project Management"])

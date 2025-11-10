@@ -119,23 +119,13 @@ async def update_company_details(
         user_detail.personal_email = form.get("personal_email", user_detail.personal_email)
         user_detail.current_Department = form.get("department", user_detail.current_Department)
         user_detail.current_role = form.get("current_role", user_detail.current_role)
-        user_detail.Project_name = form.get("project_name", user_detail.Project_name)
+        user_detail.project_name = form.get("project_name", user_detail.project_name)
         
         # Handle dates
         join_date = form.get("date_of_joining")
         if join_date:
             user_detail.date_of_joining = datetime.strptime(join_date, "%Y-%m-%d")
-            
-        project_start = form.get("project_start_date")
-        if project_start:
-            user_detail.project_Start_date = datetime.strptime(project_start, "%Y-%m-%d")
-            
-        project_end = form.get("project_end_date")
-        if project_end:
-            user_detail.project_End_date = datetime.strptime(project_end, "%Y-%m-%d")
-            
-        user_detail.project_description = form.get("project_description", user_detail.project_description)
-        
+               
         db.commit()
         
         return RedirectResponse(

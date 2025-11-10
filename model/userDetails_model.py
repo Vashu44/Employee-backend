@@ -20,11 +20,7 @@ class UserDetails(Base):
     current_Department = Column(String(30), nullable=True) 
     current_role = Column(String(30), nullable = True)
     profile_pic = Column(LargeBinary, nullable=True)
-
-    Project_name = Column(String(100), nullable=True)
-    project_description = Column(String(500), nullable=True)
-    project_Start_date = Column(Date, nullable=True)
-    project_End_date = Column(Date, nullable=True)
+    project_name = Column(String(50), nullable=True)
 
     user = relationship("User", back_populates="user_details")
 
