@@ -1,10 +1,10 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 from db.database import get_db
-from Schema.userDetails_schema import UserBasicDetailsResponse, UserBasicDetailsUpdate
 from model import usermodels
-import model.userDetails_model as userDetails_model
 from model.userDetails_model import UserDetails
+from Schema.userDetails_schema import UserBasicDetailsResponse, UserBasicDetailsUpdate,userProjectNameResponse
+from service.user_details_service import ProjectService
 from datetime import date, datetime
 import logging
 
@@ -93,7 +93,7 @@ async def update_user_project_assignment(
 
         user_details = user.user_details
         if not user_details:
-            user_details = userDetails_model.UserDetails(user_id=user_id)
+            user_details = UserDetails(user_id=user_id)
             db.add(user_details)
             db.flush() 
 
@@ -171,7 +171,7 @@ async def get_all_users(db: Session = Depends(get_db)):
         details = user.user_details
         if not details:
             # Create user_details record if missing
-            details = userDetails_model.UserDetails(user_id=user.id)
+            details = UserDetails(user_id=user.id)
             db.add(details)
             db.flush()
             db.refresh(details)
@@ -184,3 +184,13 @@ async def get_all_users(db: Session = Depends(get_db)):
         })
     db.commit()
     return result
+
+
+
+@router.get("/user/{user_id}/project-name", response_model=userProjectNameResponse)
+async def get_project_details_by_user_id(
+    user_id: int,
+    db: Session = Depends(get_db)
+):
+    """Get all projects assigned to a specific user"""
+    return await ProjectService.get_project_name_by_user_id(db, user_id)

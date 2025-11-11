@@ -35,3 +35,6 @@ class UserSearchRequest(BaseModel):
     full_name: Optional[str] 
     personal_email: Optional[EmailStr]
     user_id: Optional[int]
+
+class userProjectNameResponse(BaseModel):
+    project_name: Optional[str]
