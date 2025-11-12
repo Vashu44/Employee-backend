@@ -136,16 +136,30 @@ async def create_policy(
         if not policy_pdf.filename or not policy_pdf.filename.lower().endswith('.pdf'):
             raise HTTPException(status_code=400, detail="Only PDF files are allowed")
         
+        # Ensure upload directory exists
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        
         # Create safe filename
         safe_filename = f"{name.replace(' ', '_').lower()}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
         file_path = UPLOAD_DIR / safe_filename
         
-        # Save the uploaded file
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(policy_pdf.file, buffer)
+        try:
+            # Save the uploaded file
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(policy_pdf.file, buffer)
             
-        policy_data["pdf_filename"] = policy_pdf.filename
-        policy_data["pdf_path"] = str(file_path)
+            # Verify file was saved
+            if not os.path.isfile(file_path):
+                raise HTTPException(status_code=500, detail="Failed to save PDF file")
+            
+            logger.info(f"✓ PDF saved successfully at: {file_path}")
+            logger.info(f"✓ File size: {os.path.getsize(file_path)} bytes")
+                
+            policy_data["pdf_filename"] = policy_pdf.filename
+            policy_data["pdf_path"] = str(file_path)
+        except Exception as e:
+            logger.error(f"Error saving PDF: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to save PDF: {str(e)}")
     
     # Create the policy in DB
     db_policy = Policy(**policy_data)
@@ -204,11 +218,15 @@ async def update_policy(
         if not policy_pdf.filename or not policy_pdf.filename.lower().endswith('.pdf'):
             raise HTTPException(status_code=400, detail="Only PDF files are allowed")
         
+        # Ensure upload directory exists
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        
         # Remove old PDF if exists
         pdf_path = getattr(db_policy, "pdf_path", None)
         if pdf_path and os.path.exists(str(pdf_path)):
             try:
                 os.remove(str(pdf_path))
+                logger.info(f"✓ Removed old PDF: {pdf_path}")
             except OSError as e:
                 logger.error(f"Error removing old PDF: {str(e)}")
         
@@ -216,12 +234,23 @@ async def update_policy(
         safe_filename = f"{name.replace(' ', '_').lower()}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
         file_path = UPLOAD_DIR / safe_filename
         
-        # Save the uploaded file
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(policy_pdf.file, buffer)
+        try:
+            # Save the uploaded file
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(policy_pdf.file, buffer)
             
-        setattr(db_policy, "pdf_filename", policy_pdf.filename)
-        setattr(db_policy, "pdf_path", str(file_path))
+            # Verify file was saved
+            if not os.path.isfile(file_path):
+                raise HTTPException(status_code=500, detail="Failed to save PDF file")
+            
+            logger.info(f"✓ PDF updated successfully at: {file_path}")
+            logger.info(f"✓ File size: {os.path.getsize(file_path)} bytes")
+                
+            setattr(db_policy, "pdf_filename", policy_pdf.filename)
+            setattr(db_policy, "pdf_path", str(file_path))
+        except Exception as e:
+            logger.error(f"Error saving PDF: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Failed to save PDF: {str(e)}")
  
     setattr(db_policy, "updated_at", datetime.utcnow())
     db.commit()
@@ -241,6 +270,8 @@ async def download_policy_pdf(policy_id: int, db: Session = db_dependency):
     
     # Get the PDF path from the policy
     stored_path = getattr(policy, "pdf_path", None)
+    pdf_filename = getattr(policy, "pdf_filename", None)
+    
     if not stored_path:
         raise HTTPException(status_code=404, detail="Policy PDF not uploaded")
     
@@ -249,54 +280,71 @@ async def download_policy_pdf(policy_id: int, db: Session = db_dependency):
     
     # Log for debugging
     logger.info(f"Attempting to serve PDF for policy {policy_id}")
-    logger.info(f"Stored path: {stored_path_str}")
-    logger.info(f"Upload directory: {UPLOAD_DIR}")
+    logger.info(f"Stored path in DB: {stored_path_str}")
+    logger.info(f"Current upload directory: {UPLOAD_DIR}")
     
     file_path = None
     
-    # First try the path directly
+    # First try the path directly (for new uploads)
     if os.path.isfile(stored_path_str):
         logger.info(f"✓ PDF found at stored path: {stored_path_str}")
         file_path = stored_path_str
     else:
-        # Extract filename and try in the uploads directory
-        try:
-            filename = os.path.basename(stored_path_str)
-            alternative_path = os.path.join(str(UPLOAD_DIR), filename)
+        # If stored path doesn't exist, try to find file by filename in current upload directory
+        # This handles cases where:
+        # 1. File was uploaded on different server/environment (like /opt/render/...)
+        # 2. Server was moved or directory structure changed
+        
+        if pdf_filename:
+            # Try using the original filename in current upload directory
+            current_path = UPLOAD_DIR / pdf_filename
+            logger.info(f"Trying with original filename: {current_path}")
             
-            logger.info(f"Trying alternative path: {alternative_path}")
-            
-            if os.path.isfile(alternative_path):
-                logger.info(f"✓ PDF found at alternative path: {alternative_path}")
-                file_path = alternative_path
-            else:
-                # List files in upload directory for debugging
-                try:
-                    files_in_dir = os.listdir(str(UPLOAD_DIR))
-                    logger.error(f"Files in upload directory: {files_in_dir}")
-                except Exception as e:
-                    logger.error(f"Could not list upload directory: {e}")
+            if os.path.isfile(current_path):
+                logger.info(f"✓ PDF found with original filename: {current_path}")
+                file_path = current_path
+        
+        # If still not found, try extracting filename from stored path
+        if not file_path:
+            try:
+                filename = os.path.basename(stored_path_str)
+                alternative_path = UPLOAD_DIR / filename
                 
-                raise HTTPException(
-                    status_code=404, 
-                    detail=f"PDF file not found. Tried: {stored_path_str} and {alternative_path}"
-                )
-        except HTTPException:
-            raise
-        except Exception as e:
-            logger.error(f"Error resolving PDF path: {str(e)}")
-            raise HTTPException(status_code=500, detail="Error accessing policy PDF file")
+                logger.info(f"Trying with extracted filename: {alternative_path}")
+                
+                if os.path.isfile(alternative_path):
+                    logger.info(f"✓ PDF found at alternative path: {alternative_path}")
+                    file_path = alternative_path
+            except Exception as e:
+                logger.error(f"Error extracting filename: {e}")
+        
+        # If still not found, list directory contents for debugging
+        if not file_path:
+            try:
+                files_in_dir = os.listdir(str(UPLOAD_DIR))
+                logger.error(f"❌ PDF not found anywhere!")
+                logger.error(f"Files in upload directory ({UPLOAD_DIR}): {files_in_dir}")
+                logger.error(f"Searched for: {stored_path_str}")
+                if pdf_filename:
+                    logger.error(f"Also searched for: {pdf_filename}")
+            except Exception as e:
+                logger.error(f"Could not list upload directory: {e}")
+            
+            raise HTTPException(
+                status_code=404, 
+                detail=f"PDF file not found. Please re-upload the policy PDF."
+            )
     
-    # Get filename for display
-    filename = getattr(policy, "pdf_filename", None) or os.path.basename(file_path)
+    # Get display filename
+    display_filename = pdf_filename or os.path.basename(file_path)
     
     # Return file with inline display for browser viewing
     return FileResponse(
         path=file_path,
-        filename=str(filename),
+        filename=str(display_filename),
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'inline; filename="{filename}"'  # inline = view in browser
+            "Content-Disposition": f'inline; filename="{display_filename}"'  # inline = view in browser
         }
     )
 
