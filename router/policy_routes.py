@@ -233,7 +233,7 @@ async def update_policy(
 @router.get("/policies/{policy_id}/download", status_code=status.HTTP_200_OK)
 async def download_policy_pdf(policy_id: int, db: Session = db_dependency):
     """
-    Download a policy's PDF file
+    Download/View a policy's PDF file in browser
     """
     policy = db.query(Policy).filter(Policy.id == policy_id).first()
     if not policy:
@@ -242,14 +242,21 @@ async def download_policy_pdf(policy_id: int, db: Session = db_dependency):
     # Get the PDF path from the policy
     stored_path = getattr(policy, "pdf_path", None)
     if not stored_path:
-        raise HTTPException(status_code=404, detail="Policy PDF path is not set")
+        raise HTTPException(status_code=404, detail="Policy PDF not uploaded")
     
     # Convert SQLAlchemy property to string
     stored_path_str = str(stored_path)
     
+    # Log for debugging
+    logger.info(f"Attempting to serve PDF for policy {policy_id}")
+    logger.info(f"Stored path: {stored_path_str}")
+    logger.info(f"Upload directory: {UPLOAD_DIR}")
+    
+    file_path = None
+    
     # First try the path directly
     if os.path.isfile(stored_path_str):
-        logger.info(f"Serving PDF directly from stored path: {stored_path_str}")
+        logger.info(f"✓ PDF found at stored path: {stored_path_str}")
         file_path = stored_path_str
     else:
         # Extract filename and try in the uploads directory
@@ -257,25 +264,40 @@ async def download_policy_pdf(policy_id: int, db: Session = db_dependency):
             filename = os.path.basename(stored_path_str)
             alternative_path = os.path.join(str(UPLOAD_DIR), filename)
             
+            logger.info(f"Trying alternative path: {alternative_path}")
+            
             if os.path.isfile(alternative_path):
-                logger.info(f"Serving PDF from alternative path: {alternative_path}")
+                logger.info(f"✓ PDF found at alternative path: {alternative_path}")
                 file_path = alternative_path
             else:
+                # List files in upload directory for debugging
+                try:
+                    files_in_dir = os.listdir(str(UPLOAD_DIR))
+                    logger.error(f"Files in upload directory: {files_in_dir}")
+                except Exception as e:
+                    logger.error(f"Could not list upload directory: {e}")
+                
                 raise HTTPException(
                     status_code=404, 
-                    detail=f"Policy PDF not found. Tried paths: {stored_path_str} and {alternative_path}"
+                    detail=f"PDF file not found. Tried: {stored_path_str} and {alternative_path}"
                 )
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Error resolving PDF path: {str(e)}")
             raise HTTPException(status_code=500, detail="Error accessing policy PDF file")
     
-    # Get filename for the download
+    # Get filename for display
     filename = getattr(policy, "pdf_filename", None) or os.path.basename(file_path)
     
+    # Return file with inline display for browser viewing
     return FileResponse(
         path=file_path,
         filename=str(filename),
-        media_type="application/pdf"
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'inline; filename="{filename}"'  # inline = view in browser
+        }
     )
 
 
