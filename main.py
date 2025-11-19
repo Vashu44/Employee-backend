@@ -67,30 +67,30 @@ CACHE_DURATION = os.getenv("CACHE_DURATION")
 REACT_APP_API_URL = os.getenv("REACT_APP_API_URL")
 
 # Parse comma-separated origins and create list
-allowed_origins = []
-for env_var in [REACT_APP_API_URL]:
-    if env_var:
-        origins = [origin.strip() for origin in env_var.split(",") if origin.strip()]
-        allowed_origins.extend(origins)
+# allowed_origins =REACT_APP_API_URL
+# for env_var in [REACT_APP_API_URL]:
+#     if env_var:
+#         origins = [origin.strip() for origin in env_var.split(",") if origin.strip()]
+#         allowed_origins.extend(origins)
 
-# Remove duplicates while preserving order
-allowed_origins = list(dict.fromkeys(allowed_origins))
+# # Remove duplicates while preserving order
+# allowed_origins = list(dict.fromkeys(allowed_origins))
 
 # IMPORTANT: Always allow these origins as fallback
-if not allowed_origins:
-    # If no origins configured, allow common development origins
-    allowed_origins = ["https://concientech-intranet-portal.netlify.app"]
-    print("⚠️ WARNING: No CORS origins configured in environment variables!")
-    print("⚠️ Using default development origins. Set FRONTEND_URL in production!")
-else:
-    # Ensure localhost is always included for development
-    if "http://localhost:3000" not in allowed_origins:
-        allowed_origins.append("http://localhost:3000")
+# if not allowed_origins:
+#     # If no origins configured, allow common development origins
+#     allowed_origins = ["https://concientech-intranet-portal.netlify.app"]
+#     print("⚠️ WARNING: No CORS origins configured in environment variables!")
+#     print("⚠️ Using default development origins. Set FRONTEND_URL in production!")
+# else:
+#     # Ensure localhost is always included for development
+#     if "http://localhost:3000" not in allowed_origins:
+#         allowed_origins.append("http://localhost:3000")
 
 print("=" * 60)
 print("CORS Configuration:")
 print(f"REACT_APP_API_URL env: '{REACT_APP_API_URL}'")
-print(f"Allowed CORS Origins: {allowed_origins}")
+# print(f"Allowed CORS Origins: {allowed_origins}")
 print("=" * 60)
 
 # Initialize Redis client
@@ -107,7 +107,7 @@ app = FastAPI(
 # IMPORTANT: Add CORS middleware FIRST, before mounting other apps
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=[REACT_APP_API_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -115,19 +115,19 @@ app.add_middleware(
 )
 
 # Add custom middleware to ensure CORS headers are always present
-@app.middleware("http")
-async def add_cors_header(request, call_next):
-    response = await call_next(request)
-    origin = request.headers.get("origin")
+# @app.middleware("http")
+# async def add_cors_header(request, call_next):
+#     response = await call_next(request)
+#     origin = request.headers.get("origin")
     
-    # If origin is in allowed list, add CORS header
-    if origin in allowed_origins or "*" in allowed_origins:
-        response.headers["Access-Control-Allow-Origin"] = origin if "*" not in allowed_origins else "*"
-        response.headers["Access-Control-Allow-Credentials"] = "true"
-        response.headers["Access-Control-Allow-Methods"] = "*"
-        response.headers["Access-Control-Allow-Headers"] = "*"
+#     # If origin is in allowed list, add CORS header
+#     if origin in allowed_origins or "*" in allowed_origins:
+#         response.headers["Access-Control-Allow-Origin"] = origin if "*" not in allowed_origins else "*"
+#         response.headers["Access-Control-Allow-Credentials"] = "true"
+#         response.headers["Access-Control-Allow-Methods"] = "*"
+#         response.headers["Access-Control-Allow-Headers"] = "*"
     
-    return response
+#     return response
 
 # Mount static files and routes AFTER CORS
 app.mount("/static", StaticFiles(directory="./static"), name="static")
@@ -140,17 +140,17 @@ db_dependency = Annotated[Session, Depends(get_db)]
 
 
 # Debug endpoint to check environment variables and CORS configuration
-@app.get("/debug/cors-config")
-async def debug_cors_config():
-    """Returns CORS configuration for debugging"""
-    return {
-        "status": "ok",
-        "cors_origins": allowed_origins,
-        "env_vars": {
-            "REACT_APP_API_URL": os.getenv("REACT_APP_API_URL", "NOT_SET"),
-            "FRONTEND_URL": os.getenv("FRONTEND_URL", "NOT_SET"),
-        }
-    }
+# @app.get("/debug/cors-config")
+# async def debug_cors_config():
+#     """Returns CORS configuration for debugging"""
+#     return {
+#         "status": "ok",
+#         "cors_origins": allowed_origins,
+#         "env_vars": {
+#             "REACT_APP_API_URL": os.getenv("REACT_APP_API_URL", "NOT_SET"),
+#             "FRONTEND_URL": os.getenv("FRONTEND_URL", "NOT_SET"),
+#         }
+#     }
 
 
 # Define the User model (Schema)
