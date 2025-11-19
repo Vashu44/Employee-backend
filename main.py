@@ -64,8 +64,8 @@ REFRESH_TOKEN_EXPIRE_DAYS = os.getenv("REFRESH_TOKEN_EXPIRE_DAYS")
 CACHE_DURATION = os.getenv("CACHE_DURATION")
 
 # Read CORS origins from environment variables
-REACT_APP_API_URL = os.getenv("REACT_APP_API_URL", "")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "")
+REACT_APP_API_URL = os.getenv("REACT_APP_API_URL")
+FRONTEND_URL = os.getenv("FRONTEND_URL")
 
 # Parse comma-separated origins and create list
 allowed_origins = []
@@ -434,7 +434,7 @@ async def forgot_password(request: PasswordResetRequest, db: Session = Depends(g
             raise HTTPException(status_code=500, detail="Failed to store reset token")
 
         # Create reset link with JWT token
-        reset_link = f"${REACT_APP_API_URL}/reset-password-form?token={jwt_token}"
+        reset_link = f"{REACT_APP_API_URL}/reset-password-form?token={jwt_token}"
 
         # Prepare email message
         message = MessageSchema(
@@ -452,7 +452,8 @@ async def forgot_password(request: PasswordResetRequest, db: Session = Depends(g
             If you didn't request this password reset, please ignore this email.
 
             Best regards,
-            Your Hitesh~s App Team
+            concientech It Solution 
+            Haridwar 249404
             """,
             subtype=MessageType.plain
         )
