@@ -65,11 +65,10 @@ CACHE_DURATION = os.getenv("CACHE_DURATION")
 
 # Read CORS origins from environment variables
 REACT_APP_API_URL = os.getenv("REACT_APP_API_URL")
-FRONTEND_URL = os.getenv("FRONTEND_URL")
 
 # Parse comma-separated origins and create list
 allowed_origins = []
-for env_var in [REACT_APP_API_URL, FRONTEND_URL]:
+for env_var in [REACT_APP_API_URL]:
     if env_var:
         origins = [origin.strip() for origin in env_var.split(",") if origin.strip()]
         allowed_origins.extend(origins)
@@ -80,7 +79,7 @@ allowed_origins = list(dict.fromkeys(allowed_origins))
 # IMPORTANT: Always allow these origins as fallback
 if not allowed_origins:
     # If no origins configured, allow common development origins
-    allowed_origins = ["http://localhost:3000", "https://concientech-intranet-portal.netlify.app"]
+    allowed_origins = ["https://concientech-intranet-portal.netlify.app"]
     print("⚠️ WARNING: No CORS origins configured in environment variables!")
     print("⚠️ Using default development origins. Set FRONTEND_URL in production!")
 else:
@@ -91,7 +90,6 @@ else:
 print("=" * 60)
 print("CORS Configuration:")
 print(f"REACT_APP_API_URL env: '{REACT_APP_API_URL}'")
-print(f"FRONTEND_URL env: '{FRONTEND_URL}'")
 print(f"Allowed CORS Origins: {allowed_origins}")
 print("=" * 60)
 
