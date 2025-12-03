@@ -111,7 +111,14 @@ async def admin_logout(request: Request):
 # Root route
 @admin_panel.get("/", response_class=HTMLResponse)
 async def admin_root(request: Request):
-    return RedirectResponse(url="/admin/dashboard", status_code=302)
+    admin_username = request.session.get("admin_username")
+    
+    if admin_username:
+        # If authenticated, go to dashboard
+        return RedirectResponse(url="/admin/dashboard", status_code=302)
+    else:
+        
+        return RedirectResponse(url="/admin/login", status_code=302)
 
 # Dashboard route - Shows dashboard.html with stats and user list
 @admin_panel.get("/dashboard", response_class=HTMLResponse)
