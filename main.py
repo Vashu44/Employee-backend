@@ -67,25 +67,25 @@ CACHE_DURATION = os.getenv("CACHE_DURATION")
 REACT_APP_API_URL = os.getenv("REACT_APP_API_URL")
 
 # Parse comma-separated origins and create list
-# allowed_origins =REACT_APP_API_URL
-# for env_var in [REACT_APP_API_URL]:
-#     if env_var:
-#         origins = [origin.strip() for origin in env_var.split(",") if origin.strip()]
-#         allowed_origins.extend(origins)
+allowed_origins =REACT_APP_API_URL
+for env_var in [REACT_APP_API_URL]:
+    if env_var:
+        origins = [origin.strip() for origin in env_var.split(",") if origin.strip()]
+        allowed_origins.extend(origins)
 
-# # Remove duplicates while preserving order
-# allowed_origins = list(dict.fromkeys(allowed_origins))
+# Remove duplicates while preserving order
+allowed_origins = list(dict.fromkeys(allowed_origins))
 
 # IMPORTANT: Always allow these origins as fallback
-# if not allowed_origins:
-#     # If no origins configured, allow common development origins
-#     allowed_origins = ["https://concientech-intranet-portal.netlify.app"]
-#     print("⚠️ WARNING: No CORS origins configured in environment variables!")
-#     print("⚠️ Using default development origins. Set FRONTEND_URL in production!")
-# else:
-#     # Ensure localhost is always included for development
-#     if "http://localhost:3000" not in allowed_origins:
-#         allowed_origins.append("http://localhost:3000")
+if not allowed_origins:
+    # If no origins configured, allow common development origins
+    allowed_origins = ["https://concientech-intranet-portal.netlify.app"]
+    print("⚠️ WARNING: No CORS origins configured in environment variables!")
+    print("⚠️ Using default development origins. Set FRONTEND_URL in production!")
+else:
+    # Ensure localhost is always included for development
+    if "http://14.93.209.209" not in allowed_origins:
+        allowed_origins.append("http://14.93.209.209")
 
 print("=" * 60)
 print("CORS Configuration:")
@@ -107,7 +107,7 @@ app = FastAPI(
 # IMPORTANT: Add CORS middleware FIRST, before mounting other apps
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[REACT_APP_API_URL],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
