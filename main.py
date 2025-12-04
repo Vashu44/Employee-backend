@@ -64,28 +64,28 @@ REFRESH_TOKEN_EXPIRE_DAYS = os.getenv("REFRESH_TOKEN_EXPIRE_DAYS")
 CACHE_DURATION = os.getenv("CACHE_DURATION")
 
 # Read CORS origins from environment variables
-REACT_APP_API_URL = os.getenv("REACT_APP_API_URL")
+# REACT_APP_API_URL = os.getenv("REACT_APP_API_URL")
 
 # Parse comma-separated origins and create list
-allowed_origins =REACT_APP_API_URL
-for env_var in [REACT_APP_API_URL]:
-    if env_var:
-        origins = [origin.strip() for origin in env_var.split(",") if origin.strip()]
-        allowed_origins.extend(origins)
+# allowed_origins =REACT_APP_API_URL
+# for env_var in [REACT_APP_API_URL]:
+#     if env_var:
+#         origins = [origin.strip() for origin in env_var.split(",") if origin.strip()]
+#         allowed_origins.extend(origins)
 
-# Remove duplicates while preserving order
-allowed_origins = list(dict.fromkeys(allowed_origins))
+# # Remove duplicates while preserving order
+# allowed_origins = list(dict.fromkeys(allowed_origins))
 
-# IMPORTANT: Always allow these origins as fallback
-if not allowed_origins:
-    # If no origins configured, allow common development origins
-    allowed_origins = ["http:142.93.209.209"]
-    print("⚠️ WARNING: No CORS origins configured in environment variables!")
-    print("⚠️ Using default development origins. Set FRONTEND_URL in production!")
-else:
-    # Ensure localhost is always included for development
-    if "http://142.93.209.209" not in allowed_origins:
-        allowed_origins.append("http://14.93.209.209")
+# # IMPORTANT: Always allow these origins as fallback
+# if not allowed_origins:
+#     # If no origins configured, allow common development origins
+#     allowed_origins = ["http:142.93.209.209"]
+#     print("⚠️ WARNING: No CORS origins configured in environment variables!")
+#     print("⚠️ Using default development origins. Set FRONTEND_URL in production!")
+# else:
+#     # Ensure localhost is always included for development
+#     if "http://142.93.209.209" not in allowed_origins:
+#         allowed_origins.append("http://14.93.209.209")
 
 print("=" * 60)
 print("CORS Configuration:")
@@ -103,11 +103,14 @@ app = FastAPI(
     description="API for managing Employee`s details.",
     version="2.0.5",
 )
-
+origins = [
+    "http://142.93.209.209",
+    "https://concientech-intranet-portal.netlify.app"
+]
 # IMPORTANT: Add CORS middleware FIRST, before mounting other apps
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[REACT_APP_API_URL],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
