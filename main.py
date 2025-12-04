@@ -79,12 +79,12 @@ allowed_origins = list(dict.fromkeys(allowed_origins))
 # IMPORTANT: Always allow these origins as fallback
 if not allowed_origins:
     # If no origins configured, allow common development origins
-    allowed_origins = ["https://concientech-intranet-portal.netlify.app"]
+    allowed_origins = ["http:142.93.209.209"]
     print("⚠️ WARNING: No CORS origins configured in environment variables!")
     print("⚠️ Using default development origins. Set FRONTEND_URL in production!")
 else:
     # Ensure localhost is always included for development
-    if "http://14.93.209.209" not in allowed_origins:
+    if "http://142.93.209.209" not in allowed_origins:
         allowed_origins.append("http://14.93.209.209")
 
 print("=" * 60)
@@ -107,7 +107,7 @@ app = FastAPI(
 # IMPORTANT: Add CORS middleware FIRST, before mounting other apps
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
+    allow_origins=[REACT_APP_API_URL],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
