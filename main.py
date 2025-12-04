@@ -87,11 +87,11 @@ CACHE_DURATION = os.getenv("CACHE_DURATION")
 #     if "http://142.93.209.209" not in allowed_origins:
 #         allowed_origins.append("http://14.93.209.209")
 
-print("=" * 60)
-print("CORS Configuration:")
-print(f"REACT_APP_API_URL env: '{REACT_APP_API_URL}'")
-# print(f"Allowed CORS Origins: {allowed_origins}")
-print("=" * 60)
+# print("=" * 60)
+# print("CORS Configuration:")
+# print(f"REACT_APP_API_URL env: '{REACT_APP_API_URL}'")
+# # print(f"Allowed CORS Origins: {allowed_origins}")
+# print("=" * 60)
 
 # Initialize Redis client
 redis_client = RedisClient()
