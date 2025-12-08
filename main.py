@@ -105,7 +105,8 @@ app = FastAPI(
 )
 origins = [
     "http://142.93.209.209",
-    "https://concientech-intranet-portal.netlify.app"
+    "https://concientech-intranet-portal.netlify.app",
+    "http://localhost:3000"
 ]
 # IMPORTANT: Add CORS middleware FIRST, before mounting other apps
 app.add_middleware(
