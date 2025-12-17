@@ -166,7 +166,7 @@ async def get_all_users(db: Session = Depends(get_db)):
     result = []
     for user in users:
         role = getattr(user, "role", "").lower()
-        if role in ["admin", "hr"]:
+        if role in ["admin"]:
             continue
         details = user.user_details
         if not details:
