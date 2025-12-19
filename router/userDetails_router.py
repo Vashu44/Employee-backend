@@ -176,7 +176,7 @@ async def get_all_users(db: Session = Depends(get_db)):
             db.flush()
             db.refresh(details)
         result.append({
-            "user_id": user.id,
+            "id": user.id,
             "username": user.username,
             "email": user.email,
             "full_name": details.full_name if details and hasattr(details, "full_name") else "",
