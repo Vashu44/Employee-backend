@@ -159,7 +159,7 @@ async def get_user_company_details(user_id: int, db: Session = Depends(get_db)):
         print(f"Database error: {e}")
         raise HTTPException(status_code=500, detail="Database query error")
 
-
+#  this router for timesheet user list fetch excluding admin
 @router.get("/", status_code=200)
 async def get_all_users(db: Session = Depends(get_db)):
     users = db.query(usermodels.User).all()
@@ -176,7 +176,7 @@ async def get_all_users(db: Session = Depends(get_db)):
             db.flush()
             db.refresh(details)
         result.append({
-            "id": user.user_id,
+            "id": user.id,
             "username": user.username,
             "email": user.email,
             "full_name": details.full_name if details and hasattr(details, "full_name") else "",
@@ -185,6 +185,32 @@ async def get_all_users(db: Session = Depends(get_db)):
     db.commit()
     return result
 
+
+#  this router for assign project user list fetch excluding admin
+@router.get("/all", status_code=200)
+async def get_all_users_for_assign_project(db: Session = Depends(get_db)):
+    users = db.query(usermodels.User).all()
+    result = []
+    for user in users:
+        role = getattr(user, "role", "").lower()
+        if role in ["admin"]:
+            continue
+        details = user.user_details
+        if not details:
+            # Create user_details record if missing
+            details = UserDetails(user_id=user.id)
+            db.add(details)
+            db.flush()
+            db.refresh(details)
+        result.append({
+            "user_id": user.id,
+            "username": user.username,
+            "email": user.email,
+            "full_name": details.full_name if details and hasattr(details, "full_name") else "",
+            "role": user.role if hasattr(user, "role") else ""
+        })
+    db.commit()
+    return result
 
 
 @router.get("/user/{user_id}/project-name", response_model=userProjectNameResponse)
